@@ -1,0 +1,115 @@
+/* ========================================================
+   设计系统：变量、重置、断点、工具类、卡片模组
+   ======================================================== */
+
+@import './color.css';
+
+/* 设计系统变量（颜色在 color.css 中） */
+:root {
+  --radius-base: 8px;
+  --gap-xs: 6px;
+  --gap-sm: 12px;
+  --gap-md: 20px;
+  --gap-lg: 32px;
+  --shadow-card: 0 6px 18px rgba(16, 24, 40, 0.06);
+  --shadow-card-hover: 0 10px 30px rgba(16, 24, 40, 0.08);
+  --bp-desktop: 1200px;
+  --bp-laptop: 1024px;
+  --bp-tablet: 992px;
+  --bp-mobile: 768px;
+  --gutter: 16px;
+}
+
+/* Reset */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #app { height: 100%; }
+body {
+  background: var(--bg-main);
+  color: var(--text-primary);
+  font-family: "Helvetica Neue", Helvetica, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
+}
+
+/* 根字号，按断点做细微缩放 */
+html { font-size: 14px; }
+@media (max-width: 1200px) { html { font-size: 13px; } }
+@media (max-width: 768px) { html { font-size: 12px; } }
+
+/* 容器和内层居中容器 */
+.container { width: 100%; padding: 0 24px; margin: 0; }
+.container-inner {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0 16px;
+}
+
+@media (max-width: 768px) {
+  .container-inner { padding: 0 12px; }
+}
+
+/* 常用工具类 */
+.row { display: flex; flex-wrap: wrap; gap: var(--gutter); }
+.col { flex: 1 1 0%; }
+.col-1 { flex: 0 0 8.3333%; max-width: 8.3333%; }
+.col-2 { flex: 0 0 16.6667%; max-width: 16.6667%; }
+.col-3 { flex: 0 0 25%; max-width: 25%; }
+.col-4 { flex: 0 0 33.3333%; max-width: 33.3333%; }
+.col-6 { flex: 0 0 50%; max-width: 50%; }
+.col-12 { flex: 0 0 100%; max-width: 100%; }
+
+/* 布局间距 */
+.section { padding: var(--gap-lg) 0; }
+
+/* 按钮基础样式（ElementPlus 自带，但提供轻微统一样式） */
+.btn-reset { background: transparent; border: none; cursor: pointer; }
+
+/* 卡片模组：基础样式 + 变体 */
+.card {
+  background: var(--bg-card);
+  border-radius: var(--radius-base);
+  box-shadow: var(--shadow-card);
+  border: 1px solid transparent;
+  transition: all 200ms ease;
+  padding: var(--gap-md);
+}
+.card.small { padding: var(--gap-sm); }
+.card.medium { padding: var(--gap-md); }
+.card.large { padding: var(--gap-lg); }
+.card:hover { transform: translateY(-4px); box-shadow: var(--shadow-card-hover); }
+
+/* 卡片头部/尾部 */
+.card-header { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-bottom:12px; }
+.card-title { font-size:1.1rem; font-weight:600; color:var(--text-primary); }
+.card-subtitle { font-size:0.9rem; color:var(--text-secondary); }
+.card-body { color:var(--text-secondary); }
+.card-footer { margin-top:12px; display:flex; justify-content:flex-end; gap:8px; }
+
+/* 网格卡片布局示例 */
+.cards { display:grid; gap:var(--gutter); grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 1024px) { .cards { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 600px) { .cards { grid-template-columns: 1fr; } }
+
+/* 组件常用小样式 */
+.muted { color: var(--text-light); }
+.label { font-size: 0.85rem; color: var(--text-secondary); }
+
+/* 小屏适配：导航横向滚动 */
+.nav { display:flex; gap:12px; align-items:center; }
+.nav { -webkit-overflow-scrolling: touch; }
+@media (max-width: 600px) { .nav { overflow-x:auto; } }
+
+/* 表格和表单微调 */
+input, textarea, select { font-family: inherit; }
+
+/* 保持和旧样式的兼容性（Home.vue 使用的类） */
+.header { background-color: var(--bg-card); border-bottom: 1px solid var(--border-color); padding: 10px 0; position: sticky; top:0; z-index:100; }
+.header-wrap { display:flex; align-items:center; justify-content:space-between; }
+.logo h1 { color:var(--primary-color); font-size:1.25rem; margin:0; }
+.nav-item { color:var(--text-secondary); text-decoration:none; padding:8px 12px; border-radius:6px; }
+.nav-item.active, .nav-item:hover { color:var(--primary-color); background: rgba(64,158,255,0.06); }
+
+/* 页脚 */
+.footer { background: var(--bg-footer); color: var(--text-light); padding: 20px 0; margin-top: auto; }
