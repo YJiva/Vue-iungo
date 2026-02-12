@@ -5,6 +5,7 @@ import Home from '../views/home/Home.vue'
 const BlogList = () => import('../views/blog/List.vue')
 const BlogEdit = () => import('../views/blog/Edit.vue')
 const UserCenter = () => import('../views/user/Center.vue')
+const Login = () => import('../views/user/login.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -25,6 +26,10 @@ const router = createRouter({
     {
       path: '/user/center',
       component: UserCenter
+    },
+    {
+      path: '/login',
+      component: Login
     }
   ],
 })
