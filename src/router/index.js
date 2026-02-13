@@ -6,6 +6,10 @@ const BlogList = () => import('../views/blog/List.vue')
 const BlogEdit = () => import('../views/blog/Edit.vue')
 const UserCenter = () => import('../views/user/Center.vue')
 const Login = () => import('../views/user/login.vue')
+const Register = () => import('../views/user/register.vue')
+const Invite = () => import('../views/user/Invite.vue') // 假设有邀请页面
+const Notifications = () => import('../views/user/Notifications.vue') // 假设有消息页面
+const Settings = () => import('../views/user/Settings.vue') // 假设有设置页面
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -17,7 +21,8 @@ const router = createRouter({
     },
     {
       path: '/blog/list',
-      component: BlogList
+      component: BlogList,
+      name: 'BlogList'
     },
     {
       path: '/blog/edit',
@@ -30,6 +35,22 @@ const router = createRouter({
     {
       path: '/login',
       component: Login
+    },
+    {
+      path: '/register',
+      component: Register
+    },
+    {
+      path: '/invite',
+      component: Invite
+    },
+    {
+      path: '/notifications',
+      component: Notifications
+    },
+    {
+      path: '/settings',
+      component: Settings
     }
   ],
 })

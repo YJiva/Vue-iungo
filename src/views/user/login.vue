@@ -27,6 +27,7 @@
 import { ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
+import { useUserStore } from '../../stores/user'
 
 const emit = defineEmits(['success', 'open-register'])
 
@@ -34,6 +35,7 @@ const form = ref({ username: '', password: '', remember: true })
 const loading = ref(false)
 const loginFormRef = ref(null)
 const router = useRouter()
+const userStore = useUserStore()
 
 const rules = {
 	username: [{ required: true, message: '请输入用户名或邮箱', trigger: 'blur' }],
@@ -46,7 +48,7 @@ function handleLogin() {
 		if (!valid) return
 		loading.value = true
 		try {
-			await new Promise((r) => setTimeout(r, 700))
+			await userStore.login({ username: form.value.username, password: form.value.password })
 			ElMessage.success('登录成功')
 			emit('success')
 			router.push({ path: '/' })

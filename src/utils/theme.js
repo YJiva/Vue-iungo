@@ -1,9 +1,13 @@
 const THEME_KEY = 'blog_theme'
-const THEME_ORDER = ['default', 'pink', 'dark']
+const THEME_ORDER = ['default', 'dark']
+const defalutTheme = "fa-solid fa-sun"
+const darkTheme = "fa-solid fa-moon"
+const themeIcons = [defalutTheme, darkTheme]
 
 function applyTheme(name) {
   if (name && name !== 'default') {
     document.documentElement.setAttribute('data-theme', name)
+    
   } else {
     document.documentElement.removeAttribute('data-theme')
   }
