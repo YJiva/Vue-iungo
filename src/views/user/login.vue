@@ -1,0 +1,160 @@
+<template>
+  <div class="auth-layout">
+    <el-radio-group v-model="mode" size="small" class="login-mode-selector" style="margin-bottom:20px;">
+      <el-radio-button label="password">密码登录</el-radio-button>
+      <el-radio-button label="email">邮箱验证码登录</el-radio-button>
+    </el-radio-group>
+
+    <el-form :model="form" :rules="currentRules" ref="loginFormRef" label-position="left" label-width="0px">
+      <template v-if="mode === 'password'">
+        <el-form-item prop="username">
+          <el-input v-model="form.username" placeholder="用户名 / 邮箱"></el-input>
+        </el-form-item>
+
+        <el-form-item prop="password">
+          <el-input v-model="form.password" type="password" placeholder="密码"></el-input>
+        </el-form-item>
+      </template>
+
+      <template v-else>
+        <el-form-item prop="email">
+          <el-input v-model="form.email" placeholder="邮箱"></el-input>
+        </el-form-item>
+
+        <el-form-item prop="code">
+          <el-input
+            v-model="form.code"
+            placeholder="验证码"
+            style="width: calc(100% - 110px);"
+          ></el-input>
+          <el-button
+            :disabled="sendingCode || !form.email"
+            size="small"
+            @click="handleSendCode"
+            style="margin-left: 6px;"
+          >
+            {{ sendText }}
+          </el-button>
+        </el-form-item>
+      </template>
+
+      <el-form-item>
+        <div class="actions">
+          <el-checkbox v-model="form.remember" v-if="mode === 'password'">记住我</el-checkbox>
+          <el-button type="text" @click="$emit('open-register')">去注册</el-button>
+        </div>
+      </el-form-item>
+
+      <el-form-item>
+        <el-button type="primary" :loading="loading" size="large" @click="handleLogin" style="width:100%">登录</el-button>
+      </el-form-item>
+    </el-form>
+  </div>
+</template>
+
+<script setup>
+defineOptions({ name: 'LoginForm' })
+import { ref, computed } from 'vue'
+import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '../../stores/user'
+
+const emit = defineEmits(['success', 'open-register'])
+
+const mode = ref('password') // 'password' or 'email'
+const form = ref({
+  username: '',
+  password: '',
+  email: '',
+  code: '',
+  remember: true
+})
+const loading = ref(false)
+const sendingCode = ref(false)
+const countdown = ref(0)
+const loginFormRef = ref(null)
+const router = useRouter()
+const userStore = useUserStore()
+
+const passwordRules = {
+  username: [{ required: true, message: '请输入用户名或邮箱', trigger: 'blur' }],
+  password: [{ required: true, message: '请输入密码', trigger: 'blur' }]
+}
+const emailRules = {
+  email: [{ required: true, message: '请输入邮箱', trigger: 'blur' }],
+  code: [{ required: true, message: '请输入验证码', trigger: 'blur' }]
+}
+const currentRules = computed(() => (mode.value === 'password' ? passwordRules : emailRules))
+
+const sendText = computed(() => {
+  if (countdown.value > 0) {
+    return `重新发送 (${countdown.value}s)`
+  }
+  return '发送验证码'
+})
+
+function handleLogin() {
+  if (!loginFormRef.value) return
+  loginFormRef.value.validate(async (valid) => {
+    if (!valid) return
+    loading.value = true
+    try {
+      if (mode.value === 'password') {
+        await userStore.loginPassword({
+          username: form.value.username,
+          password: form.value.password
+        })
+      } else {
+        await userStore.loginEmail({
+          email: form.value.email,
+          code: form.value.code
+        })
+      }
+      ElMessage.success('登录成功')
+      emit('success')
+      router.push({ path: '/' })
+    } catch (err) {
+      console.error(err)
+      ElMessage.error('登录失败')
+    } finally {
+      loading.value = false
+    }
+  })
+}
+
+function startCountdown() {
+  countdown.value = 60
+  const timer = setInterval(() => {
+    countdown.value--
+    if (countdown.value <= 0) {
+      clearInterval(timer)
+    }
+  }, 1000)
+}
+
+async function handleSendCode() {
+  if (!form.value.email) {
+    ElMessage.warning('请输入邮箱')
+    return
+  }
+  sendingCode.value = true
+  try {
+    await userStore.sendEmailCode(form.value.email)
+    ElMessage.success('验证码发送成功，请检查邮箱')
+    startCountdown()
+  } catch (err) {
+    console.error(err)
+    ElMessage.error('发送验证码失败')
+  } finally {
+    sendingCode.value = false
+  }
+}
+</script>
+
+<style scoped>
+.actions {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+</style>

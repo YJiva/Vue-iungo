@@ -1,0 +1,51 @@
+/* Color tokens and theme variables
+   用于集中管理颜色 / 主题，支持深色模式切换 */
+
+:root {
+  --primary-color: #409eff;
+  --primary-light: #66b1ff;
+  --primary-dark: #337ecc;
+
+  --bg-main: #f5f7fa;
+  --bg-card: #ffffff;
+  --bg-footer: #2e3b4e;
+
+  --text-primary: #303133;
+  --text-secondary: #606266;
+  --text-light: #909399;
+  --border-color: #e4e7ed;
+  --primary-color-rgb: 64,158,255;
+}
+
+/* 深色主题覆盖（通过 document[data-theme="dark"] 切换） */
+[data-theme="dark"] {
+  --primary-color: #54a0ff;
+  --primary-light: #77b9ff;
+  --primary-dark: #2980b9;
+  --bg-main: #0f1720;
+  --bg-card: #0f1724;
+  --bg-footer: #06070a;
+  --text-primary: #e5e7eb;
+  --text-secondary: #9aa4b2;
+  --text-light: #8b98a7;
+  --border-color: #1f2933;
+  --primary-color-rgb: 84,160,255;
+}
+
+/* 粉色主题（小清新） */
+[data-theme="pink"] {
+  --primary-color: #ff6fa3;
+  --primary-light: #ff9fcb;
+  --primary-dark: #e55686;
+
+  --bg-main: #fff6fb;
+  --bg-card: #ffffff;
+  --bg-footer: #ffdff0;
+
+  --text-primary: #3b2940;
+  --text-secondary: #6b5166;
+  --text-light: #9b7f92;
+  --border-color: rgba(107,81,102,0.12);
+  --primary-color-rgb: 255,111,163;
+}
+

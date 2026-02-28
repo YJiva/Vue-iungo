@@ -1,0 +1,34 @@
+@import './css/color.css';
+
+#app {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 2rem;
+  font-weight: normal;
+}
+
+a,
+.green {
+  text-decoration: none;
+  color: hsla(160, 100%, 37%, 1);
+  transition: 0.4s;
+  padding: 3px;
+}
+
+@media (hover: hover) {
+  a:hover {
+    background-color: hsla(160, 100%, 37%, 0.2);
+  }
+}
+
+@media (min-width: 1024px) {
+  body {
+    /* keep default flow; avoid centering that breaks full-width layout */
+  }
+
+  #app {
+    display: block;
+    padding: 0 2rem;
+  }
+}
