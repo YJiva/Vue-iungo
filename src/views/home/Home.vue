@@ -1,7 +1,7 @@
 <template>
   <div class="home-page">
     <!-- 原有导航栏、核心内容区、页脚不变 -->
-    
+
 
     <main class="main">
       <div class="container container-inner main-wrap">
@@ -43,10 +43,10 @@
             </div>
             <!-- 用户名列表 -->
             <div class="username-list" style="padding: 10px 0;">
-              <el-tag 
-                v-for="name in usernameList" 
-                :key="name" 
-                size="medium" 
+              <el-tag
+                v-for="name in usernameList"
+                :key="name"
+                size="medium"
                 style="margin: 5px;"
                 @click="fetchUserDetail(name)"
               >
@@ -119,24 +119,16 @@
 </template>
 
 <script setup>
-import { ref, getCurrentInstance, onMounted, computed } from 'vue'
+defineOptions({ name: 'HomePage' })
+import { ref, getCurrentInstance, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { UserFilled, Collection } from '@element-plus/icons-vue'
 import request from '../../utils/request'
+import { useUserStore } from '../../stores/user'
 
 const router = useRouter()
 const { proxy } = getCurrentInstance()
-const theme = ref(proxy.$getTheme())
-const themeLabel = computed(() => {
-  if (theme.value === 'dark') return '暗色'
-  if (theme.value === 'pink') return '粉色'
-  return '默认'
-})
-
-const cycleTheme = () => {
-  proxy.$cycleTheme()
-  theme.value = proxy.$getTheme()
-}
+const userStore = useUserStore()
 
 // 原有博客数据相关响应式变量不变
 const blogList = ref([])
@@ -155,20 +147,22 @@ const userLoading = ref(false) // 用户详情加载状态
 const fetchHomeData = async () => {
   try {
     loading.value = true
-    const response = await request.get('/api/home/data')
+    // request posts list from backend
+    const userId = userStore.userInfo?.id || ''
+    const response = await request.get('/api/post/list', { offset: 0, limit: 10, userId, scope: 2 })
     const res = response.data
     if (res.code === 200) {
-      blogList.value = res.data.blogList || []
-      totalUsers.value = res.data.totalUsers || 0
-      totalBlogs.value = res.data.totalBlogs || 0
-      totalInvites.value = res.data.totalInvites || 0
-      circleList.value = res.data.circleList || []
+      blogList.value = res.data || []
+      // backend might provide statistics separately; we keep previous fields if available
+      totalUsers.value = res.data.totalUsers || totalUsers.value
+      totalBlogs.value = res.data.totalBlogs || totalBlogs.value
+      totalInvites.value = res.data.totalInvites || totalInvites.value
+      circleList.value = res.data.circleList || circleList.value
     } else {
       proxy.$message.error(res.message || '数据获取失败')
     }
   } catch (error) {
     console.error('请求后端接口失败：', error)
-    proxy.$message.error('网络错误，无法连接后端服务器')
   } finally {
     loading.value = false
   }
@@ -178,7 +172,7 @@ const fetchHomeData = async () => {
 const fetchAllUsernames = async () => {
   try {
     // 调用后端：http://localhost:8080/api/test/usernames
-    const response = await request.get('/api/test/usernames')
+    const response = await request.get('/api/home/usernames')
     const res = response.data
     if (res.code === 200) {
       usernameList.value = res.data || []
@@ -198,7 +192,7 @@ const fetchUserDetail = async (username) => {
     userLoading.value = true
     currentUser.value = null // 清空之前的详情
     // 调用后端：http://localhost:8080/api/test/user?username=xxx
-    const response = await request.get(`/api/test/user?username=${username}`)
+    const response = await request.get(`/api/home/user?username=${username}`)
     const res = response.data
     if (res.code === 200) {
       currentUser.value = res.data // 赋值选中的用户详情
@@ -220,11 +214,8 @@ onMounted(() => {
 })
 
 // 原有跳转逻辑不变
-const goToInvite = () => {
-  router.push('/user/invite')
-}
 const goToInviteCode = () => {
-  router.push('/user/invite/code')
+  router.push('/invite')
 }
 </script>
 

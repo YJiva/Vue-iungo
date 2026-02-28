@@ -25,7 +25,7 @@ const isDark = computed({
 const onThemeChanged = (e) => {
   try {
     theme.value = e && e.detail && e.detail.theme ? e.detail.theme : getTheme()
-  } catch (err) {
+  } catch {
     theme.value = getTheme()
   }
 }
@@ -96,6 +96,7 @@ function handleCommand(command) {
         <div class="nav">
           <router-link to="/home" class="nav-item" active-class="active">首页</router-link>
           <router-link to="/blog/list" class="nav-item" active-class="active">圈层博客</router-link>
+          <router-link to="/invite" class="nav-item" active-class="active">我的邀请</router-link>
           <router-link to="/user/center" class="nav-item" active-class="active">个人中心</router-link>
           <router-link to="/blog/edit" class="nav-item publish-btn" active-class="active">发布博客</router-link>
         </div>

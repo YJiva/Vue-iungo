@@ -16,6 +16,11 @@ app.use(createPinia())
 app.use(router)
 app.use(ElementPlus)
 
+// load user auth state if token exists
+import { useUserStore } from './stores/user'
+const userStore = useUserStore()
+userStore.checkAuth()
+
 import { setTheme, initTheme, cycleTheme, getTheme } from './utils/theme'
 
 // 暴露到全局，组件可通过 `proxy.$changeTheme(name)` / `proxy.$cycleTheme()` / `proxy.$getTheme()` 调用
