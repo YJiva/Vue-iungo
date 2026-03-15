@@ -23,11 +23,12 @@ export const useUserStore = defineStore('user', () => {
   const loginPassword = async ({ username, password }) => {
     try {
       const res = await request.post('/api/user/login/password', { username, password })
-      // assume backend returns { token, user }
-      if (res.data.token) {
-        saveToken(res.data.token)
+      // backend returns { code, msg, data: { token, user } }
+      const payload = res.data && res.data.data ? res.data.data : {}
+      if (payload.token) {
+        saveToken(payload.token)
       }
-      userInfo.value = res.data.user || null
+      userInfo.value = payload.user || null
       return res
     } catch (error) {
       throw error
@@ -38,10 +39,11 @@ export const useUserStore = defineStore('user', () => {
   const loginEmail = async ({ email, code }) => {
     try {
       const res = await request.post('/api/user/login/email', { email, code })
-      if (res.data.token) {
-        saveToken(res.data.token)
+      const payload = res.data && res.data.data ? res.data.data : {}
+      if (payload.token) {
+        saveToken(payload.token)
       }
-      userInfo.value = res.data.user || null
+      userInfo.value = payload.user || null
       return res
     } catch (error) {
       throw error
@@ -77,10 +79,13 @@ export const useUserStore = defineStore('user', () => {
   const checkAuth = async () => {
     if (token.value) {
       try {
-        // some backend endpoint to verify token; not defined, keep previous as example
         const res = await request.get('/api/user/me')
-        userInfo.value = res.data && res.data.user ? res.data.user : null
-        isLoggedIn.value = true
+        if (res.data && res.data.code === 200) {
+          userInfo.value = res.data.data || null
+          isLoggedIn.value = true
+        } else {
+          logout()
+        }
       } catch (error) {
         logout()
       }
@@ -106,6 +111,27 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  const updateProfile = async (payload) => {
+    try {
+      const res = await request.post('/api/user/update', payload)
+      if (res.data && res.data.code === 200) {
+        userInfo.value = { ...(userInfo.value || {}), ...payload }
+      }
+      return res
+    } catch (error) {
+      throw error
+    }
+  }
+
+  const changePassword = async ({ oldPassword, newPassword }) => {
+    try {
+      const res = await request.post('/api/user/change-password', { oldPassword, newPassword })
+      return res
+    } catch (error) {
+      throw error
+    }
+  }
+
   return {
     isLoggedIn,
     userInfo,
@@ -117,6 +143,8 @@ export const useUserStore = defineStore('user', () => {
     logout,
     checkAuth,
     getInviteTree,
-    generateInviteCode
+    generateInviteCode,
+    updateProfile,
+    changePassword
   }
 })

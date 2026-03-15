@@ -34,9 +34,11 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request from '../../utils/request'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '../../stores/user'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 const blog = ref({})
 // versions removed - backend does not expose version/restore for posts
 const comments = ref([])
@@ -63,6 +65,11 @@ async function fetchComments(postId) {
 }
 
 async function addComment() {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录再发表评论')
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
   if (!newComment.value.trim()) return
   try {
     const r = await request.post('/api/post/comment/add', { postId: blog.value.id, content: newComment.value })
@@ -75,6 +82,11 @@ async function addComment() {
 }
 
 async function toggleFavorite() {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录后再收藏')
+    router.push({ path: '/login', query: { redirect: route.fullPath } })
+    return
+  }
   if (!blog.value.id) return
   try {
     const r = await request.post('/api/post/favorite', null, { params: { id: blog.value.id } })

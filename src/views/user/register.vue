@@ -90,7 +90,7 @@ function handleRegister() {
 		}
 		loading.value = true
 		try {
-			await userStore.register({
+			const res = await userStore.register({
 				username: form.value.username,
 				email: form.value.email,
 				emailCode: form.value.emailCode,
@@ -98,11 +98,18 @@ function handleRegister() {
 				inviteCode: form.value.inviteCode,
 				password: form.value.password
 			})
-			ElMessage.success('注册成功')
-			emit('success')
-			router.push({ path: '/' })
+      if (res.data && res.data.code === 200) {
+        ElMessage.success('注册成功，请登录')
+        emit('success')
+        router.push({ path: '/login' })
+      } else if (res.data) {
+        ElMessage.error(res.data.msg || '注册失败')
+      } else {
+        ElMessage.error('注册失败')
+      }
 		} catch (err) {
-			ElMessage.error('注册失败')
+      const msg = err?.response?.data?.msg || err?.message || '注册失败'
+			ElMessage.error(msg)
 		} finally {
 			loading.value = false
 		}

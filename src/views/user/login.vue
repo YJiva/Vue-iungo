@@ -56,7 +56,7 @@
 defineOptions({ name: 'LoginForm' })
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 
 const emit = defineEmits(['success', 'open-register'])
@@ -74,6 +74,7 @@ const sendingCode = ref(false)
 const countdown = ref(0)
 const loginFormRef = ref(null)
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const passwordRules = {
@@ -93,29 +94,42 @@ const sendText = computed(() => {
   return '发送验证码'
 })
 
+// 重构后的 handleLogin 方法
 function handleLogin() {
   if (!loginFormRef.value) return
   loginFormRef.value.validate(async (valid) => {
     if (!valid) return
     loading.value = true
     try {
+      let res
       if (mode.value === 'password') {
-        await userStore.loginPassword({
+        res = await userStore.loginPassword({
           username: form.value.username,
           password: form.value.password
         })
       } else {
-        await userStore.loginEmail({
+        res = await userStore.loginEmail({
           email: form.value.email,
           code: form.value.code
         })
       }
-      ElMessage.success('登录成功')
-      emit('success')
-      router.push({ path: '/' })
+
+
+      if (res && res.data && res.data.code === 200) {
+        ElMessage.success('登录成功')
+        emit('success')
+        const redirect = route.query.redirect || '/'
+        router.push(redirect)
+      } else if (res && res.data) {
+        ElMessage.error(res.data.msg || '登录失败')
+      } else {
+        ElMessage.error('登录失败')
+      }
     } catch (err) {
       console.error(err)
-      ElMessage.error('登录失败')
+      // 可根据错误类型自定义提示
+      const msg = err?.response?.data?.msg || err?.message || '登录失败'
+      ElMessage.error(msg)
     } finally {
       loading.value = false
     }
@@ -132,6 +146,7 @@ function startCountdown() {
   }, 1000)
 }
 
+// 重构后的发送验证码方法
 async function handleSendCode() {
   if (!form.value.email) {
     ElMessage.warning('请输入邮箱')
@@ -144,12 +159,13 @@ async function handleSendCode() {
     startCountdown()
   } catch (err) {
     console.error(err)
-    ElMessage.error('发送验证码失败')
+    ElMessage.error(err.msg || '发送验证码失败')
   } finally {
     sendingCode.value = false
   }
 }
 </script>
+
 
 <style scoped>
 .actions {

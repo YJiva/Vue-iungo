@@ -16,12 +16,16 @@ export default defineConfig({
     },
   },
   server: {
-    // 本地开发时把 /api 转发到后端，避免浏览器 CORS 拦截
+    // 本地开发时把 /api 和 /upload 转发到后端，避免浏览器 CORS 拦截
     proxy: {
       '/api': {
         target: 'http://localhost:8080',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '/api')
+      },
+      '/upload': {
+        target: 'http://localhost:8080',
+        changeOrigin: true
       }
     }
   },

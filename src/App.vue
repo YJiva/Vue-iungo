@@ -1,5 +1,5 @@
 <script setup>
-import { RouterView, useRouter } from 'vue-router'
+import { RouterView, useRouter, useRoute } from 'vue-router'
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { getTheme, setTheme } from './utils/theme'
 import { useUserStore } from './stores/user'
@@ -10,6 +10,7 @@ import RegisterView from './views/user/register.vue'
 
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 
 const loginTitle = '登录'
@@ -30,14 +31,34 @@ const onThemeChanged = (e) => {
   }
 }
 
+const lastScrollY = ref(window.scrollY || 0)
+const hideHeader = ref(false)
+
+const handleScroll = () => {
+  const currentY = window.scrollY || 0
+  const delta = currentY - lastScrollY.value
+
+  if (delta > 0) {
+    // 向下滚动：隐藏 header
+    hideHeader.value = true
+  } else if (delta < 0) {
+    // 向上滚动：显示 header
+    hideHeader.value = false
+  }
+
+  lastScrollY.value = currentY
+}
+
 onMounted(() => {
   theme.value = getTheme()
   window.addEventListener('theme-changed', onThemeChanged)
+  window.addEventListener('scroll', handleScroll, { passive: true })
   userStore.checkAuth() // 检查登录状态
 })
 
 onUnmounted(() => {
   window.removeEventListener('theme-changed', onThemeChanged)
+  window.removeEventListener('scroll', handleScroll)
 })
 
 const showAuth = ref(false)
@@ -83,11 +104,28 @@ function handleCommand(command) {
     router.push('/settings')
   }
 }
+
+// 仅在前台页面显示头部导航，在 /admin 等后台页面隐藏
+const showHeader = computed(() => {
+  const path = route.path || ''
+  // 以 /admin 开头的路由认为是后台管理，不显示前台导航
+  if (path.startsWith('/admin')) {
+    return false
+  }
+  return true
+})
+
+const headerClasses = computed(() => {
+  return {
+    header: true,
+    'header-hidden': hideHeader.value
+  }
+})
 </script>
 
 <template>
   <div id="app-shell">
-    <header :class="['header', theme.value]">
+    <header v-if="showHeader" :class="headerClasses">
       <div class="container container-inner header-wrap">
         <div class="logo">
           <h1>Iungo</h1>
@@ -125,11 +163,7 @@ function handleCommand(command) {
             </el-dropdown>
           </template>
         
-          <div class="theme-switch">
-            <span>主题</span>
-            <el-switch v-model="isDark"  @change="toggleTheme" />
-            <i :class="themeIcons"></i>
-          </div>
+          <!-- 极简浅色风格，暂时隐藏主题切换 -->
         </div>
       </div>
     </header>
@@ -150,139 +184,78 @@ function handleCommand(command) {
   position: sticky;
   top: 0;
   z-index: 1000;
-  backdrop-filter: blur(10px); /* 毛玻璃效果 */
-  padding: 0.5rem 1rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 0.6rem 1.2rem;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-color);
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
 }
 
-.header.dark {
-  background: rgba(0, 0, 0, 0.8); /* 模仿Bilibili的半透明黑色背景 */
-  color: white;
-}
-
-.header.default {
-  background: rgba(255, 255, 255, 0.8); /* 默认浅色主题背景 */
-  color: black;
+.header-hidden {
+  transform: translateY(-100%);
 }
 
 .header-wrap {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 16px;
 }
 
 .logo h1 {
   margin: 0;
-  font-size: 1.5rem;
+  font-size: 1.35rem;
+  letter-spacing: 0.06em;
 }
 
 .logo p {
   margin: 0;
   font-size: 0.8rem;
-}
-
-.header.default .logo h1 {
-  color: #d32f2f; /* 深红色logo */
-}
-
-.header.default .logo p {
-  color: #666;
+  color: var(--text-light);
 }
 
 .nav {
   display: flex;
-  gap: 1rem;
+  gap: 0.5rem;
 }
 
 .nav-item {
   text-decoration: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  transition: background-color 0.3s;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  transition: background-color 0.18s ease, color 0.18s ease;
 }
 
-.header.default .nav-item {
-  color: black;
+.nav-item.active,
+.nav-item:hover {
+  background-color: rgba(var(--primary-color-rgb), 0.08);
+  color: var(--primary-color);
 }
 
-.nav-item:hover, .nav-item.active {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.header.default .nav-item:hover, .header.default .nav-item.active {
-  background-color: rgba(0, 0, 0, 0.1);
+.publish-btn {
+  background-color: var(--primary-color);
+  color: #fff !important;
 }
 
 .search-box {
   display: flex;
   align-items: center;
-  border-radius: 20px;
-  padding: 0.25rem 0.5rem;
+  gap: 6px;
+  max-width: 260px;
   flex: 1;
-  max-width: 300px;
-  margin: 0 1rem;
-}
-
-.header.dark .search-box {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.header.default .search-box {
-  background: rgba(0, 0, 0, 0.1);
 }
 
 .search-box .el-input {
-  --el-input-bg-color: transparent;
+  --el-input-bg-color: #f3f4f6;
   --el-input-border-color: transparent;
-  --el-input-focus-border-color: transparent;
-}
-
-.header.dark .search-box .el-input {
-  color: white;
-}
-
-.header.default .search-box .el-input {
-  color: black;
-}
-
-.search-box .el-input__inner::placeholder {
-  color: #ccc;
-}
-
-.header.default .search-box .el-input__inner::placeholder {
-  color: #666;
-}
-
-.search-box .el-button {
-  background: transparent;
-  border: none;
-}
-
-.header.dark .search-box .el-button {
-  color: white;
-}
-
-.header.default .search-box .el-button {
-  color: black;
 }
 
 .user-actions {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
-}
-
-.user-actions .el-button {
-  border: none;
-}
-
-.header.dark .user-actions .el-button {
-  background: #ff6b6b;
-  color: white;
-}
-
-.header.default .user-actions .el-button {
-  background: #d32f2f;
-  color: white;
 }
 
 .avatar-btn {
@@ -291,33 +264,27 @@ function handleCommand(command) {
   border: none;
 }
 
-.theme-switch {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: inherit;
-}
-
-/* 响应式调整 */
 @media (max-width: 768px) {
   .header-wrap {
     flex-direction: column;
-    gap: 0.5rem;
+    align-items: flex-start;
+  }
+
+  .search-box {
+    max-width: 100%;
+    width: 100%;
+    order: 3;
   }
 
   .nav {
     order: 2;
-    justify-content: center;
-  }
-
-  .search-box {
-    order: 1;
-    max-width: 100%;
-    margin: 0;
+    flex-wrap: wrap;
   }
 
   .user-actions {
-    order: 3;
+    width: 100%;
+    justify-content: flex-end;
+    order: 1;
   }
 }
 </style>

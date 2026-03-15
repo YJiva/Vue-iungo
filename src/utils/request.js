@@ -1,4 +1,6 @@
 import axios from 'axios'
+import router from '../router'
+import { useUserStore } from '../stores/user'
 
 const baseURL = import.meta.env.VITE_API_BASE || ''
 
@@ -10,7 +12,7 @@ const instance = axios.create({
   }
 })
 
-// 简单的请求/响应拦截，保留原始 axios response 以兼容现有代码
+// 请求拦截：附带 token
 instance.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token')
@@ -22,9 +24,23 @@ instance.interceptors.request.use(
   (error) => Promise.reject(error)
 )
 
+// 响应拦截：统一处理 401
 instance.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const data = response.data
+    if (data && data.code === 401) {
+      const userStore = useUserStore()
+      userStore.logout()
+      router.push({ path: '/login' })
+    }
+    return response
+  },
   (error) => {
+    if (error.response && error.response.status === 401) {
+      const userStore = useUserStore()
+      userStore.logout()
+      router.push({ path: '/login' })
+    }
     return Promise.reject(error)
   }
 )

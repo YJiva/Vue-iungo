@@ -143,7 +143,7 @@ const usernameList = ref([]) // 所有用户名列表
 const currentUser = ref(null) // 选中的用户详情
 const userLoading = ref(false) // 用户详情加载状态
 
-// 原有获取博客数据的函数不变
+// 获取博客列表
 const fetchHomeData = async () => {
   try {
     loading.value = true
@@ -153,11 +153,6 @@ const fetchHomeData = async () => {
     const res = response.data
     if (res.code === 200) {
       blogList.value = res.data || []
-      // backend might provide statistics separately; we keep previous fields if available
-      totalUsers.value = res.data.totalUsers || totalUsers.value
-      totalBlogs.value = res.data.totalBlogs || totalBlogs.value
-      totalInvites.value = res.data.totalInvites || totalInvites.value
-      circleList.value = res.data.circleList || circleList.value
     } else {
       proxy.$message.error(res.message || '数据获取失败')
     }
@@ -165,6 +160,22 @@ const fetchHomeData = async () => {
     console.error('请求后端接口失败：', error)
   } finally {
     loading.value = false
+  }
+}
+
+// 首页右侧统计
+const fetchStats = async () => {
+  try {
+    const response = await request.get('/api/home/stats')
+    const res = response.data
+    if (res.code === 200 && res.data) {
+      totalUsers.value = res.data.totalUsers || 0
+      totalBlogs.value = res.data.totalBlogs || 0
+      // 这里用总邀请关系数近似“发出邀请”
+      totalInvites.value = res.data.totalPosts || 0
+    }
+  } catch (e) {
+    console.error('获取首页统计失败', e)
   }
 }
 
@@ -209,7 +220,8 @@ const fetchUserDetail = async (username) => {
 
 // 5. 页面挂载时：同时加载博客数据 + 用户名列表
 onMounted(() => {
-  fetchHomeData() // 原有逻辑
+  fetchHomeData()
+  fetchStats()
   fetchAllUsernames() // 新增逻辑
 })
 
