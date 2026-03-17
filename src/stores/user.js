@@ -102,6 +102,15 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  const getInviteTreeClose = async (userId) => {
+    try {
+      const res = await request.get('/api/user/invite-tree/close', { userId })
+      return res
+    } catch (error) {
+      throw error
+    }
+  }
+
   const generateInviteCode = async (userId) => {
     try {
       const res = await request.post(`/api/user/generate-invite-code?userId=${userId}`)
@@ -143,6 +152,7 @@ export const useUserStore = defineStore('user', () => {
     logout,
     checkAuth,
     getInviteTree,
+    getInviteTreeClose,
     generateInviteCode,
     updateProfile,
     changePassword

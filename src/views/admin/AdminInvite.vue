@@ -1,84 +1,81 @@
 <template>
-  <div class="invite-page">
-    <h2>我的邀请码</h2>
-    <div class="code-area" v-if="inviteCode">
-
-      <el-card shadow="hover">
-      {{inviteCode}}
-    </el-card>
-    </div>
-
-    <section>
-      <InviteTree :raw-tree="treeData" :show-header="true">
-        <template #right>
-          <el-switch
-            v-model="showAll"
-            active-text="全部关系"
-            inactive-text="与我相关"
-            inline-prompt
-            @change="loadTree"
-          />
-        </template>
-      </InviteTree>
-    </section>
+  <div>
+    <h2 class="section-title">邀请管理</h2>
+    <el-form :model="form" label-width="100px" class="invite-form">
+      <el-form-item label="用户ID">
+        <el-input v-model="form.userId" placeholder="输入用户ID"></el-input>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" @click="fetchTree" :loading="loadingTree">查询邀请树</el-button>
+      </el-form-item>
+    </el-form>
+    <InviteTree v-if="inviteTree.length" :raw-tree="inviteTree" :show-header="true" class="invite-tree">
+      <template #right>
+        <el-switch
+          v-model="showAll"
+          active-text="全部关系"
+          inactive-text="与他相关"
+          inline-prompt
+          @change="loadTree"
+        />
+      </template>
+    </InviteTree>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { useUserStore } from '../../stores/user'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '../../stores/user'
 import InviteTree from '../../components/InviteTree.vue'
 
 const userStore = useUserStore()
-const inviteCode = ref('')
-const treeData = ref([])
-const showAll = ref(true)
 
-async function loadTree() {
-  if (!userStore.userInfo || !userStore.userInfo.id) return
+const form = ref({ userId: '' })
+const inviteTree = ref([])
+const loadingTree = ref(false)
+const showAll = ref(false)
+
+const getCurrentUserId = () => {
+  // 输入为空时默认按 1 处理
+  return form.value.userId || 1
+}
+
+const loadTree = async () => {
+  loadingTree.value = true
   try {
+    const userId = getCurrentUserId()
+    // showAll=true: 全部关系；false: 与“他”相关
     const api = showAll.value ? userStore.getInviteTree : userStore.getInviteTreeClose
-    const res = await api(userStore.userInfo.id)
+    const res = await api(userId)
     if (res.data && res.data.data && res.data.data.tree) {
-      treeData.value = res.data.data.tree
+      inviteTree.value = res.data.data.tree
+    } else {
+      inviteTree.value = []
     }
   } catch (err) {
     console.error(err)
-    ElMessage.error('无法加载邀请树')
+    ElMessage.error('查询失败')
+  } finally {
+    loadingTree.value = false
   }
 }
 
-function copyCode() {
-  const url = `${window.location.origin}/invite?code=${inviteCode.value}`
-  navigator.clipboard.writeText(url)
-  ElMessage.success('已复制链接到剪贴板')
+// 点击“查询邀请树”：切到“与他相关”，并按当前（或默认 1）用户加载
+const fetchTree = async () => {
+  showAll.value = false
+  await loadTree()
 }
 
-onMounted(() => {
-  if (!userStore.userInfo || !userStore.userInfo.id) return
-
-  // 1) 始终从后端获取当前用户的固定邀请码（idempotent）
-  userStore
-    .generateInviteCode(userStore.userInfo.id)
-    .then((res) => {
-      if (res.data && res.data.data && res.data.data.code) {
-        inviteCode.value = res.data.data.code
-      }
-    })
-    .catch((err) => {
-      console.error(err)
-      ElMessage.error('无法获取邀请码')
-    })
-
-  // 2) 加载当前用户的邀请关系树（基于 invite_relation）
-  loadTree()
+// 初次进入页面时：默认按 userId=1 显示“全部关系”
+onMounted(async () => {
+  showAll.value = true
+  await loadTree()
 })
+
 </script>
 
 <style scoped>
-.invite-page { padding: 20px; }
-.code-area { display: flex; align-items: center; gap: 8px; }
 .invite-tree {
   max-width: 720px;
   padding: 8px 4px;
@@ -156,4 +153,17 @@ onMounted(() => {
   height: 12px; /* 短竖线 */
   background: #e5e7eb;
 }
+.section-title {
+  margin-bottom: 12px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.invite-form {
+  max-width: 480px;
+}
+.invite-tree,
+.invite-code {
+  margin-top: 20px;
+}
 </style>
+

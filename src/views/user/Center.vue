@@ -6,8 +6,18 @@
         <p><strong>用户名：</strong>{{ user.username }}</p>
         <p><strong>昵称：</strong>{{ user.nickname }}</p>
         <p><strong>邮箱：</strong>{{ user.email }}</p>
-        <p><strong>角色ID：</strong>{{ user.roleId }}</p>
-        <p><strong>邀请码：</strong>{{ user.inviteCode }}</p>
+        <p>
+          <strong>角色：</strong>
+          <el-tooltip
+            v-if="role.name || role.description"
+            :content="role.description || '无角色描述'"
+            placement="top"
+          >
+            <span>{{ role.name || ('ID ' + (user.roleId ?? '-')) }}</span>
+          </el-tooltip>
+          <span v-else>ID {{ user.roleId ?? '-' }}</span>
+        </p>
+        <p><strong>性别：</strong>{{ user.gender === 1 ? '男' : user.gender === 2 ? '女' : '未知' }}</p>
       </el-card>
       <div class="actions">
         <el-button type="primary" @click="$router.push('/settings')">编辑资料 / 修改密码</el-button>
@@ -58,6 +68,7 @@ const userStore = useUserStore()
 
 const user = computed(() => userStore.userInfo)
 
+const role = ref({ name: '', description: '' })
 const following = ref([])
 const followers = ref([])
 const loadingFollowing = ref(false)
@@ -103,6 +114,18 @@ onMounted(() => {
   if (!userStore.isLoggedIn) {
     router.push('/login')
   } else {
+    // 加载当前用户角色信息
+    request
+      .get('/api/user/role-info')
+      .then((res) => {
+        if (res.data && res.data.code === 200 && res.data.data) {
+          role.value = res.data.data
+        }
+      })
+      .catch((e) => {
+        console.error(e)
+      })
+
     fetchFollowing()
     fetchFollowers()
   }

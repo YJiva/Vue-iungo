@@ -15,6 +15,13 @@
             <el-form-item label="昵称" prop="nickname">
               <el-input v-model="profileForm.nickname" placeholder="展示名称" />
             </el-form-item>
+             <el-form-item label="性别" prop="gender">
+             <el-radio-group v-model="profileForm.gender">
+      <el-radio :label="1">男</el-radio>
+      <el-radio :label="2">女</el-radio>
+      <el-radio :label="0">未知</el-radio>
+  </el-radio-group>
+            </el-form-item>
             <el-form-item label="头像">
               <div class="avatar-row">
                 <el-avatar
@@ -118,7 +125,8 @@ const profileForm = ref({
   email: '',
   nickname: '',
   avatar: '',
-  bio: ''
+  bio: '',
+  gender: ''
 })
 
 const defaultAvatar = 'https://via.placeholder.com/80x80.png?text=Avatar'
@@ -149,7 +157,8 @@ const initProfile = () => {
     email: user.value.email,
     nickname: user.value.nickname || '',
     avatar: user.value.avatar || '',
-    bio: user.value.bio || ''
+    bio: user.value.bio || '',
+    gender: user.value.gender || 0
   }
 }
 
@@ -193,7 +202,8 @@ const uploadCroppedAvatar = async () => {
           email: user.value.email,
           nickname: profileForm.value.nickname,
           avatar: profileForm.value.avatar,
-          bio: profileForm.value.bio
+          bio: profileForm.value.bio,
+          gender: profileForm.value.gender
         }
         const resUpdate = await userStore.updateProfile(payload)
         if (!(resUpdate.data && resUpdate.data.code === 200)) {
@@ -224,7 +234,8 @@ const submitProfile = () => {
         email: profileForm.value.email,
         nickname: profileForm.value.nickname,
         avatar: profileForm.value.avatar,
-        bio: profileForm.value.bio
+        bio: profileForm.value.bio,
+        gender: profileForm.value.gender
       }
       const res = await userStore.updateProfile(payload)
       if (res.data && res.data.code === 200) {

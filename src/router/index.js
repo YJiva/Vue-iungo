@@ -14,7 +14,14 @@ const Register = () => import('../views/user/register.vue')
 const Invite = () => import('../views/user/Invite.vue')
 const Notifications = () => import('../views/user/Notifications.vue')
 const Settings = () => import('../views/user/Settings.vue')
-const Admin = () => import('../views/admin/admin.vue')
+const AdminLayout = () => import('../views/admin/Admin.vue')
+const AdminDashboard = () => import('../views/admin/AdminDashboard.vue')
+const AdminUsers = () => import('../views/admin/AdminUsers.vue')
+const AdminRoles = () => import('../views/admin/AdminRoles.vue')
+const AdminBlogTypes = () => import('../views/admin/AdminBlogTypes.vue')
+const AdminBlogs = () => import('../views/admin/AdminBlogs.vue')
+const AdminInvite = () => import('../views/admin/AdminInvite.vue')
+const AdminLogin = () => import('../views/admin/AdminLogin.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -22,8 +29,21 @@ const router = createRouter({
     { path: '/', redirect: '/home' },
     {
       path: '/admin',
-      component: Admin,
-      meta: { requiresAuth: true, roles: ['ADMIN'] }
+      component: AdminLayout,
+      meta: { requiresAuth: true, roles: ['ADMIN'] },
+      children: [
+        { path: '', redirect: '/admin/dashboard' },
+        { path: 'dashboard', component: AdminDashboard },
+        { path: 'users', component: AdminUsers },
+        { path: 'roles', component: AdminRoles },
+        { path: 'blog-types', component: AdminBlogTypes },
+        { path: 'blogs', component: AdminBlogs },
+        { path: 'invite', component: AdminInvite }
+      ]
+    },
+    {
+      path: '/admin/login',
+      component: AdminLogin
     },
     {
       path: '/home',
@@ -85,14 +105,33 @@ const router = createRouter({
   ]
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore()
   const requiresAuth = to.meta && to.meta.requiresAuth
   const roles = (to.meta && to.meta.roles) || null
+  const isAdminRoute = typeof to.path === 'string' && to.path.startsWith('/admin')
+
+  // 刷新后，若本地有 token 但 Pinia 还没恢复登录态，先尝试异步校验一次
+  if (!userStore.isLoggedIn && userStore.token) {
+    try {
+      await userStore.checkAuth()
+    } catch {
+      // ignore，下面逻辑会处理未登录情况
+    }
+  }
+
+  // 已登录用户访问 /admin/login：直接跳去后台
+  if (to.path === '/admin/login' && userStore.isLoggedIn && userStore.userInfo) {
+    const isAdmin = userStore.userInfo.roleId === 2
+    if (isAdmin) {
+      next({ path: '/admin/dashboard' })
+      return
+    }
+  }
 
   if (requiresAuth && !userStore.isLoggedIn) {
     next({
-      path: '/login',
+      path: isAdminRoute ? '/admin/login' : '/login',
       query: { redirect: to.fullPath }
     })
     return

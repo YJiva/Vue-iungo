@@ -7,61 +7,60 @@
       <div class="container container-inner main-wrap">
         <!-- 原有左侧博客列表不变 -->
         <div class="main-left">
-          <div class="card blog-list">
+          <div class="blog-list"
+               v-infinite-scroll="loadMore"
+               :infinite-scroll-disabled="loadingMore || finished || loading"
+               :infinite-scroll-distance="80">
             <div class="blog-list-header">
-              <h2>圈层优质博客</h2>
-              <span>仅邀请用户可见</span>
+              <h2>精选博客</h2>
             </div>
             <div v-if="loading" style="text-align: center; padding: 20px;">
               <el-loading-spinner /> 加载中...
             </div>
-            <div v-else class="blog-item" v-for="blog in blogList" :key="blog.id">
-              <div class="blog-title">
-                <router-link :to="`/blog/detail/${blog.id}`">{{ blog.title }}</router-link>
+            <div v-else>
+              <!-- 只渲染当前可见的前 N 条，初始最多 5 条，下拉再逐步 +5 -->
+              <div class="card blog-item-card"
+                   v-for="blog in visibleBlogs"
+                   :key="blog.id"
+                   @click="$router.push(`/blog/detail/${blog.id}`)"
+                   style="cursor: pointer;">
+                <div class="blog-title">
+                 {{ blog.title }}
+                </div>
+                <div class="blog-meta">
+                  <span>作者ID：{{ blog.userId }}</span>
+                  <span>{{ blog.createTime }}</span>
+                  <span v-if="blog.read != null">{{ blog.read }} 阅读</span>
+                </div>
+                <div class="blog-desc">
+                  {{ getExcerpt(blog.content) }}
+                </div>
+                <div class="blog-tags" v-if="resolveTags(blog).length">
+                  <el-tag
+                    v-for="t in resolveTags(blog)"
+                    :key="t.id"
+                    :type="t.show === 0 ? 'info' : 'success'"
+                    :effect="t.show === 0 ? 'plain' : 'light'"
+                    size="small"
+                  >
+                    {{ t.name }}
+                  </el-tag>
+                </div>
               </div>
-              <div class="blog-meta">
-                <span>{{ blog.author }}</span>
-                <span>{{ blog.createTime }}</span>
-                <span>{{ blog.readCount }}阅读</span>
-                <span>{{ blog.inviteCircle }}</span>
+
+              <div v-if="visibleBlogs.length === 0" style="text-align: center; padding: 20px; color: var(--text-light);">
+                暂无博客数据
               </div>
-              <div class="blog-desc">{{ blog.desc }}</div>
-              <div class="blog-tags">
-                <el-tag v-for="tag in blog.tags" :key="tag" size="small">{{ tag }}</el-tag>
+
+              <!-- 无更多提示 -->
+              <div v-if="finished && visibleBlogs.length" style="text-align:center;color:var(--text-light);font-size:12px;margin-top:4px;">
+                没有更多了
               </div>
-            </div>
-            <div v-if="!loading && blogList.length === 0" style="text-align: center; padding: 20px; color: var(--text-light);">
-              暂无博客数据
             </div>
           </div>
 
           <!-- 新增：测试用户名展示区域（核心改动） -->
-          <div class="card user-test-card" style="margin-top: 20px;">
-            <div class="user-test-header">
-              <h2>测试用户名列表（数据库直连）</h2>
-              <el-button type="primary" size="small" @click="fetchAllUsernames">刷新用户名</el-button>
-            </div>
-            <!-- 用户名列表 -->
-            <div class="username-list" style="padding: 10px 0;">
-              <el-tag
-                v-for="name in usernameList"
-                :key="name"
-                size="medium"
-                style="margin: 5px;"
-                @click="fetchUserDetail(name)"
-              >
-                {{ name }}
-              </el-tag>
-            </div>
-            <!-- 选中用户的详情 -->
-            <div class="user-detail" v-if="currentUser">
-              <h4>选中用户详情：</h4>
-              <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px;">{{ JSON.stringify(currentUser, null, 2) }}</pre>
-            </div>
-            <div v-if="userLoading" style="text-align: center; padding: 10px;">
-              <el-loading-spinner size="small" /> 加载用户详情...
-            </div>
-          </div>
+
         </div>
 
         <!-- 原有右侧内容不变 -->
@@ -120,11 +119,12 @@
 
 <script setup>
 defineOptions({ name: 'HomePage' })
-import { ref, getCurrentInstance, onMounted } from 'vue'
+import { ref, getCurrentInstance, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { UserFilled, Collection } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useUserStore } from '../../stores/user'
+import { buildBlogTypeMap, resolveBlogTags } from '../../utils/blogTags'
 
 const router = useRouter()
 const { proxy } = getCurrentInstance()
@@ -132,6 +132,11 @@ const userStore = useUserStore()
 
 // 原有博客数据相关响应式变量不变
 const blogList = ref([])
+// 首页精选博客：前端分页 + 无限滚动控制
+const visibleCount = ref(0)
+const pageSize = 5
+const loadingMore = ref(false)
+const finished = ref(false)
 const totalUsers = ref(0)
 const totalBlogs = ref(0)
 const totalInvites = ref(0)
@@ -143,16 +148,27 @@ const usernameList = ref([]) // 所有用户名列表
 const currentUser = ref(null) // 选中的用户详情
 const userLoading = ref(false) // 用户详情加载状态
 
-// 获取博客列表
+// blog_type 映射：id -> { id, name, show }，前端解析 tags 使用
+const typeMap = ref({})
+
+// 计算当前要展示的前 N 条精选博客
+const visibleBlogs = computed(() => {
+  return blogList.value.slice(0, visibleCount.value)
+})
+
+// 获取精选博客列表（使用 blog 接口）
 const fetchHomeData = async () => {
   try {
     loading.value = true
-    // request posts list from backend
-    const userId = userStore.userInfo?.id || ''
-    const response = await request.get('/api/post/list', { offset: 0, limit: 10, userId, scope: 2 })
+    const userId = userStore.userInfo?.id || 0
+    // scope=2 仅公共博客
+    const response = await request.get('/api/blog/list-by-scope', { userId, scope: 2 })
     const res = response.data
     if (res.code === 200) {
       blogList.value = res.data || []
+      // 初始只展示最多 5 条
+      visibleCount.value = Math.min(pageSize, blogList.value.length)
+      finished.value = visibleCount.value >= blogList.value.length
     } else {
       proxy.$message.error(res.message || '数据获取失败')
     }
@@ -160,6 +176,45 @@ const fetchHomeData = async () => {
     console.error('请求后端接口失败：', error)
   } finally {
     loading.value = false
+  }
+}
+
+// 触底加载更多：一次最多再增加 5 条
+const loadMore = async () => {
+  if (loadingMore.value || finished.value || loading.value) return
+  loadingMore.value = true
+  try {
+    // 小延时让体验更自然
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    const next = visibleCount.value + pageSize
+    visibleCount.value = Math.min(next, blogList.value.length)
+    if (visibleCount.value >= blogList.value.length) {
+      finished.value = true
+    }
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+// 内容摘要（去掉 HTML 标签）
+const getExcerpt = (html) => {
+  if (!html) return ''
+  const plain = html.replace(/<[^>]+>/g, '').trim()
+  return plain.length > 60 ? plain.slice(0, 60) + '…' : plain
+}
+
+const resolveTags = (blog) => resolveBlogTags(blog && blog.tags, typeMap.value)
+
+// 加载 blog_type，用于解析 tags
+const fetchBlogTypes = async () => {
+  try {
+    const response = await request.get('/api/blog/types')
+    const res = response.data
+    if (res.code === 200 && Array.isArray(res.data)) {
+      typeMap.value = buildBlogTypeMap(res.data)
+    }
+  } catch (e) {
+    console.error('加载博客标签类型失败', e)
   }
 }
 
@@ -182,12 +237,12 @@ const fetchStats = async () => {
 // 3. 新增：获取所有用户名的函数（调用后端测试接口）
 const fetchAllUsernames = async () => {
   try {
-    // 调用后端：http://localhost:8080/api/test/usernames
+
     const response = await request.get('/api/home/usernames')
     const res = response.data
     if (res.code === 200) {
       usernameList.value = res.data || []
-      proxy.$message.success('用户名列表加载成功！')
+
     } else {
       proxy.$message.error(res.message || '用户名列表加载失败')
     }
@@ -218,8 +273,9 @@ const fetchUserDetail = async (username) => {
   }
 }
 
-// 5. 页面挂载时：同时加载博客数据 + 用户名列表
+// 5. 页面挂载时：同时加载博客数据 + 标签类型 + 用户名列表
 onMounted(() => {
+  fetchBlogTypes()
   fetchHomeData()
   fetchStats()
   fetchAllUsernames() // 新增逻辑
@@ -233,6 +289,10 @@ const goToInviteCode = () => {
 
 <style scoped>
 /* 原有样式不变，新增少量样式适配测试区域 */
+
+.blog-item-card{
+  margin-bottom: 30px;
+}
 .home-page {
   min-height: 100vh;
   display: flex;
