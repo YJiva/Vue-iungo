@@ -1,4 +1,5 @@
 <template>
+<<<<<<< HEAD
   <div class="page-settings">
     <div class="container container-inner" v-if="user">
       <h2>账户设置</h2>
@@ -98,10 +99,16 @@
         <el-button type="primary" @click="uploadCroppedAvatar">确定</el-button>
       </template>
     </el-dialog>
+=======
+  <div>
+    <h1>设置</h1>
+    <p>用户设置页面</p>
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
   </div>
 </template>
 
 <script setup>
+<<<<<<< HEAD
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
@@ -326,3 +333,7 @@ onMounted(() => {
   margin-left: 8px;
 }
 </style>
+=======
+// 设置页面逻辑
+</script>
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10

@@ -7,6 +7,7 @@
           <el-input v-model="form.title"></el-input>
         </el-form-item>
         <el-form-item label="内容" prop="content">
+<<<<<<< HEAD
           <div class="rich-editor">
             <Toolbar
               :editor="editorRef"
@@ -39,6 +40,12 @@
               :value="t.id"
             />
           </el-select>
+=======
+          <el-input type="textarea" rows="10" v-model="form.content"></el-input>
+        </el-form-item>
+        <el-form-item label="标签" prop="tags">
+          <el-input v-model="form.tags" placeholder="逗号分隔"></el-input>
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
         </el-form-item>
         <el-form-item>
           <el-button type="primary" :loading="saving" @click="saveBlog">保存</el-button>
@@ -49,6 +56,7 @@
 </template>
 
 <script setup>
+<<<<<<< HEAD
 import { ref, onMounted, shallowRef, onBeforeUnmount } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import request from '../../utils/request'
@@ -107,10 +115,26 @@ editorConfig.MENU_CONF.uploadImage = {
 }
 
 onMounted(async () => {
+=======
+import { ref, onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import request from '../../utils/request'
+import { ElMessage } from 'element-plus'
+
+const route = useRoute()
+const router = useRouter()
+const formRef = ref(null)
+const saving = ref(false)
+const isEdit = ref(false)
+const form = ref({ id: '', title: '', content: '', tags: '' })
+
+onMounted(() => {
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
   // support editing if id passed via query or params
   const id = route.query.id || route.params.id
   if (id) {
     isEdit.value = true
+<<<<<<< HEAD
     // 编辑模式下可以在这里根据 id 拉取详情并填充表单（留给后续扩展）
     form.value.id = id
   }
@@ -155,12 +179,19 @@ onBeforeUnmount(() => {
   if (editor) {
     editor.destroy()
   }
+=======
+    // fetch blog detail if such API exists (not specified)
+    // placeholder: assign id
+    form.value.id = id
+  }
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
 })
 
 const saveBlog = async () => {
   if (!formRef.value) return
   formRef.value.validate(async valid => {
     if (!valid) return
+<<<<<<< HEAD
     // 简单校验富文本内容是否为空（去掉 HTML 标签后判断）
     const plain = (html.value || '').replace(/<[^>]+>/g, '').trim()
     if (!plain) {
@@ -181,12 +212,22 @@ const saveBlog = async () => {
       const payload = {
         id: form.value.id,
         userId,
+=======
+    saving.value = true
+    try {
+      const payload = {
+        id: form.value.id,
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
         title: form.value.title,
         content: form.value.content,
         tags: form.value.tags
       }
+<<<<<<< HEAD
       // 使用博客模块的保存接口
       const res = await request.post('/api/blog/save', payload)
+=======
+      const res = await request.post('/api/post/create', payload)
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
       if (res.data && res.data.code === 200) {
         ElMessage.success('保存成功')
         router.push('/blog/list')
@@ -204,6 +245,7 @@ const saveBlog = async () => {
 </script>
 
 <style scoped>
+<<<<<<< HEAD
 .page-blog-edit {
   padding: 20px 0;
 }
@@ -222,4 +264,7 @@ const saveBlog = async () => {
   height: 100%;
   min-height: 320px;
 }
+=======
+.page-blog-edit { padding: 20px 0; }
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
 </style>

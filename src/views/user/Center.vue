@@ -1,5 +1,6 @@
 <template>
   <div class="page-user-center">
+<<<<<<< HEAD
     <div class="container container-inner" v-if="user">
       <h2>个人中心</h2>
       <el-card class="user-card">
@@ -53,11 +54,17 @@
     <div v-else class="container container-inner">
       <p>未登录或会话已过期，请先登录。</p>
       <el-button type="primary" @click="$router.push('/login')">去登录</el-button>
+=======
+    <div class="container container-inner">
+      <h2>个人中心（占位）</h2>
+      <p>用户中心占位页面。</p>
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
     </div>
   </div>
 </template>
 
 <script setup>
+<<<<<<< HEAD
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
@@ -130,10 +137,13 @@ onMounted(() => {
     fetchFollowers()
   }
 })
+=======
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
 </script>
 
 <style scoped>
 .page-user-center { padding: 20px 0; }
+<<<<<<< HEAD
 .user-card { margin-bottom: 16px; max-width: 400px; }
 .actions { display: flex; gap: 12px; }
 .follow-section {
@@ -165,4 +175,6 @@ onMounted(() => {
   color: var(--text-light);
   font-size: 13px;
 }
+=======
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
 </style>

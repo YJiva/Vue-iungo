@@ -10,6 +10,7 @@
       </el-form-item>
 
       <el-form-item prop="nickname">
+<<<<<<< HEAD
         <el-input v-model="form.nickname" placeholder="昵称"></el-input>
       </el-form-item>
  <el-form-item prop="gender">
@@ -19,6 +20,11 @@
         <el-radio :label="0">未知</el-radio>
       </el-radio-group>
   </el-form-item>
+=======
+        <el-input v-model="form.nickname" placeholder="昵称（可选）"></el-input>
+      </el-form-item>
+
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
       <el-form-item prop="inviteCode">
         <el-input v-model="form.inviteCode" placeholder="邀请码"></el-input>
       </el-form-item>
@@ -61,7 +67,11 @@ import { useUserStore } from '../../stores/user'
 
 const emit = defineEmits(['success'])
 
+<<<<<<< HEAD
 const form = ref({ username: '', email: '', nickname: '', inviteCode: '', emailCode: '', password: '', confirm: '',gender:0 })
+=======
+const form = ref({ username: '', email: '', nickname: '', inviteCode: '', emailCode: '', password: '', confirm: '' })
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
 const loading = ref(false)
 const sendingCode = ref(false)
 const countdown = ref(0)
@@ -80,7 +90,10 @@ const rules = {
 	username: [{ required: true, message: '请输入用户名', trigger: 'blur' }],
 	email: [{ required: true, message: '请输入邮箱', trigger: 'blur' }],
 	nickname: [],
+<<<<<<< HEAD
   gender:[{ required: true, message: '请选择性别', trigger: 'change' }],
+=======
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
 	inviteCode: [{ required: true, message: '请输入邀请码', trigger: 'blur' }],
 	emailCode: [{ required: true, message: '请输入验证码', trigger: 'blur' }],
 	password: [{ required: true, message: '请输入密码', trigger: 'blur' }],
@@ -97,11 +110,16 @@ function handleRegister() {
 		}
 		loading.value = true
 		try {
+<<<<<<< HEAD
 			const res = await userStore.register({
+=======
+			await userStore.register({
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
 				username: form.value.username,
 				email: form.value.email,
 				emailCode: form.value.emailCode,
 				nickname: form.value.nickname,
+<<<<<<< HEAD
         gender: form.value.gender,
 				inviteCode: form.value.inviteCode,
 				password: form.value.password
@@ -118,6 +136,16 @@ function handleRegister() {
 		} catch (err) {
       const msg = err?.response?.data?.msg || err?.message || '注册失败'
 			ElMessage.error(msg)
+=======
+				inviteCode: form.value.inviteCode,
+				password: form.value.password
+			})
+			ElMessage.success('注册成功')
+			emit('success')
+			router.push({ path: '/' })
+		} catch (err) {
+			ElMessage.error('注册失败')
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
 		} finally {
 			loading.value = false
 		}
@@ -157,4 +185,8 @@ async function sendRegisterCode() {
 .auth-layout {
 	padding: 8px 0;
 }
+<<<<<<< HEAD
 </style>
+=======
+</style>
+>>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
