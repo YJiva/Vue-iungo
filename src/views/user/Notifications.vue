@@ -1,5 +1,4 @@
 <template>
-<<<<<<< HEAD
   <div class="page-notifications">
     <div class="container container-inner">
       <h2>消息通知</h2>
@@ -36,16 +35,10 @@
         </el-list>
       </div>
     </div>
-=======
-  <div>
-    <h1>消息通知</h1>
-    <p>暂无新消息</p>
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
   </div>
 </template>
 
 <script setup>
-<<<<<<< HEAD
 import { ref, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '../../utils/request'
@@ -130,7 +123,3 @@ onMounted(fetchList)
   justify-content: space-between;
 }
 </style>
-=======
-// 消息页面逻辑
-</script>
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10

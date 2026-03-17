@@ -23,20 +23,12 @@ export const useUserStore = defineStore('user', () => {
   const loginPassword = async ({ username, password }) => {
     try {
       const res = await request.post('/api/user/login/password', { username, password })
-<<<<<<< HEAD
       // backend returns { code, msg, data: { token, user } }
       const payload = res.data && res.data.data ? res.data.data : {}
       if (payload.token) {
         saveToken(payload.token)
       }
       userInfo.value = payload.user || null
-=======
-      // assume backend returns { token, user }
-      if (res.data.token) {
-        saveToken(res.data.token)
-      }
-      userInfo.value = res.data.user || null
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
       return res
     } catch (error) {
       throw error
@@ -47,18 +39,11 @@ export const useUserStore = defineStore('user', () => {
   const loginEmail = async ({ email, code }) => {
     try {
       const res = await request.post('/api/user/login/email', { email, code })
-<<<<<<< HEAD
       const payload = res.data && res.data.data ? res.data.data : {}
       if (payload.token) {
         saveToken(payload.token)
       }
       userInfo.value = payload.user || null
-=======
-      if (res.data.token) {
-        saveToken(res.data.token)
-      }
-      userInfo.value = res.data.user || null
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
       return res
     } catch (error) {
       throw error
@@ -94,7 +79,6 @@ export const useUserStore = defineStore('user', () => {
   const checkAuth = async () => {
     if (token.value) {
       try {
-<<<<<<< HEAD
         const res = await request.get('/api/user/me')
         if (res.data && res.data.code === 200) {
           userInfo.value = res.data.data || null
@@ -102,12 +86,6 @@ export const useUserStore = defineStore('user', () => {
         } else {
           logout()
         }
-=======
-        // some backend endpoint to verify token; not defined, keep previous as example
-        const res = await request.get('/api/user/me')
-        userInfo.value = res.data && res.data.user ? res.data.user : null
-        isLoggedIn.value = true
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
       } catch (error) {
         logout()
       }
@@ -124,7 +102,6 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-<<<<<<< HEAD
   const getInviteTreeClose = async (userId) => {
     try {
       const res = await request.get('/api/user/invite-tree/close', { userId })
@@ -134,8 +111,6 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-=======
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
   const generateInviteCode = async (userId) => {
     try {
       const res = await request.post(`/api/user/generate-invite-code?userId=${userId}`)
@@ -145,7 +120,6 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-<<<<<<< HEAD
   const updateProfile = async (payload) => {
     try {
       const res = await request.post('/api/user/update', payload)
@@ -167,8 +141,6 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-=======
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
   return {
     isLoggedIn,
     userInfo,
@@ -180,13 +152,9 @@ export const useUserStore = defineStore('user', () => {
     logout,
     checkAuth,
     getInviteTree,
-<<<<<<< HEAD
     getInviteTreeClose,
     generateInviteCode,
     updateProfile,
     changePassword
-=======
-    generateInviteCode
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
   }
 })

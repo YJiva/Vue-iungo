@@ -2,7 +2,6 @@
    用于集中管理颜色 / 主题，支持深色模式切换 */
 
 :root {
-<<<<<<< HEAD
   --primary-color: #2563eb;
   --primary-light: #60a5fa;
   --primary-dark: #1d4ed8;
@@ -16,21 +15,6 @@
   --text-light: #9ca3af;
   --border-color: #e5e7eb;
   --primary-color-rgb: 37,99,235;
-=======
-  --primary-color: #409eff;
-  --primary-light: #66b1ff;
-  --primary-dark: #337ecc;
-
-  --bg-main: #f5f7fa;
-  --bg-card: #ffffff;
-  --bg-footer: #2e3b4e;
-
-  --text-primary: #303133;
-  --text-secondary: #606266;
-  --text-light: #909399;
-  --border-color: #e4e7ed;
-  --primary-color-rgb: 64,158,255;
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
 }
 
 /* 深色主题覆盖（通过 document[data-theme="dark"] 切换） */

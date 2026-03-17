@@ -56,11 +56,7 @@
 defineOptions({ name: 'LoginForm' })
 import { ref, computed } from 'vue'
 import { ElMessage } from 'element-plus'
-<<<<<<< HEAD
 import { useRouter, useRoute } from 'vue-router'
-=======
-import { useRouter } from 'vue-router'
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
 import { useUserStore } from '../../stores/user'
 
 const emit = defineEmits(['success', 'open-register'])
@@ -78,10 +74,7 @@ const sendingCode = ref(false)
 const countdown = ref(0)
 const loginFormRef = ref(null)
 const router = useRouter()
-<<<<<<< HEAD
 const route = useRoute()
-=======
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
 const userStore = useUserStore()
 
 const passwordRules = {
@@ -101,38 +94,25 @@ const sendText = computed(() => {
   return '发送验证码'
 })
 
-<<<<<<< HEAD
 // 重构后的 handleLogin 方法
-=======
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
 function handleLogin() {
   if (!loginFormRef.value) return
   loginFormRef.value.validate(async (valid) => {
     if (!valid) return
     loading.value = true
     try {
-<<<<<<< HEAD
       let res
       if (mode.value === 'password') {
         res = await userStore.loginPassword({
-=======
-      if (mode.value === 'password') {
-        await userStore.loginPassword({
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
           username: form.value.username,
           password: form.value.password
         })
       } else {
-<<<<<<< HEAD
         res = await userStore.loginEmail({
-=======
-        await userStore.loginEmail({
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
           email: form.value.email,
           code: form.value.code
         })
       }
-<<<<<<< HEAD
 
 
       if (res && res.data && res.data.code === 200) {
@@ -150,14 +130,6 @@ function handleLogin() {
       // 可根据错误类型自定义提示
       const msg = err?.response?.data?.msg || err?.message || '登录失败'
       ElMessage.error(msg)
-=======
-      ElMessage.success('登录成功')
-      emit('success')
-      router.push({ path: '/' })
-    } catch (err) {
-      console.error(err)
-      ElMessage.error('登录失败')
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
     } finally {
       loading.value = false
     }
@@ -174,10 +146,7 @@ function startCountdown() {
   }, 1000)
 }
 
-<<<<<<< HEAD
 // 重构后的发送验证码方法
-=======
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
 async function handleSendCode() {
   if (!form.value.email) {
     ElMessage.warning('请输入邮箱')
@@ -190,21 +159,13 @@ async function handleSendCode() {
     startCountdown()
   } catch (err) {
     console.error(err)
-<<<<<<< HEAD
     ElMessage.error(err.msg || '发送验证码失败')
-=======
-    ElMessage.error('发送验证码失败')
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
   } finally {
     sendingCode.value = false
   }
 }
 </script>
 
-<<<<<<< HEAD
-
-=======
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
 <style scoped>
 .actions {
 	display: flex;

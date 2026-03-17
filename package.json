@@ -14,7 +14,7 @@
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
-<<<<<<< HEAD
+
     "@vueup/vue-quill": "^1.2.0",
     "@wangeditor/editor": "^5.1.23",
     "@wangeditor/editor-for-vue": "^5.1.12",
@@ -24,12 +24,7 @@
     "quill": "^1.3.7",
     "vue": "^3.5.27",
     "vue-picture-cropper": "^0.7.0",
-=======
-    "axios": "^1.13.5",
-    "element-plus": "^2.13.2",
-    "pinia": "^3.0.4",
-    "vue": "^3.5.27",
->>>>>>> a6c072d7ffd6458d3c95abca694bcc854a61da10
+
     "vue-router": "^5.0.1"
   },
   "devDependencies": {
