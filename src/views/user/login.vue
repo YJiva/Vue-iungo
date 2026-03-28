@@ -49,6 +49,12 @@
         <el-button type="primary" :loading="loading" size="large" @click="handleLogin" style="width:100%">登录</el-button>
       </el-form-item>
     </el-form>
+
+    <el-tooltip class="admin-entry-tooltip" placement="bottom" content="管理员登录" effect="dark">
+      <button class="admin-entry" type="button" @click="goAdminLogin">
+        <i class="fa-solid fa-ticket"></i>
+      </button>
+    </el-tooltip>
   </div>
 </template>
 
@@ -59,7 +65,7 @@ import { ElMessage } from 'element-plus'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 
-const emit = defineEmits(['success', 'open-register'])
+const emit = defineEmits(['success', 'open-register', 'close-auth'])
 
 const mode = ref('password') // 'password' or 'email'
 const form = ref({
@@ -94,7 +100,6 @@ const sendText = computed(() => {
   return '发送验证码'
 })
 
-// 重构后的 handleLogin 方法
 function handleLogin() {
   if (!loginFormRef.value) return
   loginFormRef.value.validate(async (valid) => {
@@ -114,7 +119,6 @@ function handleLogin() {
         })
       }
 
-
       if (res && res.data && res.data.code === 200) {
         ElMessage.success('登录成功')
         emit('success')
@@ -127,7 +131,6 @@ function handleLogin() {
       }
     } catch (err) {
       console.error(err)
-      // 可根据错误类型自定义提示
       const msg = err?.response?.data?.msg || err?.message || '登录失败'
       ElMessage.error(msg)
     } finally {
@@ -146,7 +149,6 @@ function startCountdown() {
   }, 1000)
 }
 
-// 重构后的发送验证码方法
 async function handleSendCode() {
   if (!form.value.email) {
     ElMessage.warning('请输入邮箱')
@@ -164,12 +166,46 @@ async function handleSendCode() {
     sendingCode.value = false
   }
 }
+
+function goAdminLogin() {
+  emit('close-auth')
+  router.push('/admin/login')
+}
 </script>
 
 <style scoped>
 .actions {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
+
+.auth-layout {
+  position: relative;
+  padding-bottom: 24px;
+}
+
+.admin-entry {
+  position: absolute;
+      right: -17px;
+    bottom: -18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: none;
+  background: #f3f4f6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  cursor: pointer;
+  transition: transform 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.admin-entry:hover {
+  transform: translateY(-1px);
+  color: rgb(99, 230, 190);
+  background: #ecfeff;
+}
+
 </style>

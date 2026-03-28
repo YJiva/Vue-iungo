@@ -2,10 +2,20 @@
   <div>
     <div class="roles-header">
       <h2 class="section-title">角色管理</h2>
-      <el-button type="primary" size="small" @click="openCreateRole">新增角色</el-button>
+      <div class="roles-actions">
+        <el-input
+          v-model="q"
+          clearable
+          placeholder="搜索：输入ID(纯数字)或关键词(名称/描述)"
+          style="width: 320px;"
+          @keyup.enter="onSearch"
+        />
+        <el-button size="small" @click="onSearch">搜索</el-button>
+        <el-button type="primary" size="small" @click="openCreateRole">新增角色</el-button>
+      </div>
     </div>
     <el-table :data="roles" style="width: 100%;" size="small" v-loading="loadingRoles">
-      <el-table-column prop="id" label="ID" width="60" />
+      <el-table-column prop="id" label="ID" width="80" sortable />
       <el-table-column prop="name" label="名称" width="160" />
       <el-table-column prop="description" label="描述" />
       <el-table-column label="操作" width="160">
@@ -15,6 +25,19 @@
         </template>
       </el-table-column>
     </el-table>
+
+    <div class="pager">
+      <el-pagination
+        background
+        layout="prev, pager, next, sizes, total"
+        :total="total"
+        :page-size="pageSize"
+        :current-page="page"
+        :page-sizes="[5, 10, 20, 50, 100]"
+        @current-change="handlePageChange"
+        @size-change="handleSizeChange"
+      />
+    </div>
 
     <el-dialog v-model="roleDialogVisible" :title="roleEditing ? '编辑角色' : '新增角色'" width="400px">
       <el-form :model="roleForm" label-width="70px">
@@ -39,12 +62,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '../../utils/request'
 
 const roles = ref([])
 const loadingRoles = ref(false)
+const q = ref('')
+const page = ref(1)
+const pageSize = ref(5)
+const total = ref(0)
 const roleDialogVisible = ref(false)
 const roleEditing = ref(false)
 const roleForm = ref({ id: null, name: '', description: '' })
@@ -52,9 +79,20 @@ const roleForm = ref({ id: null, name: '', description: '' })
 const fetchRoles = async () => {
   loadingRoles.value = true
   try {
-    const res = await request.get('/api/admin/role/list')
+    const query = String(q.value || '').trim()
+    const isId = /^\d+$/.test(query)
+    const params = {
+      page: page.value,
+      size: Number(pageSize.value)
+    }
+    if (query) {
+      if (isId) params.id = Number(query)
+      else params.keyword = query
+    }
+    const res = await request.get('/api/admin/role/list', params)
     if (res.data && res.data.code === 200) {
       roles.value = res.data.data || []
+      total.value = Number(res.data.total || 0)
     } else {
       ElMessage.error(res.data.msg || '加载角色失败')
     }
@@ -114,6 +152,36 @@ const deleteRole = async (row) => {
   }
 }
 
+const onSearch = async () => {
+  page.value = 1
+  await fetchRoles()
+}
+
+let debounceTimer = null
+onBeforeUnmount(() => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+})
+watch(
+  () => q.value,
+  () => {
+    if (debounceTimer) clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => {
+      onSearch()
+    }, 300)
+  }
+)
+
+const handlePageChange = async (p) => {
+  page.value = p
+  await fetchRoles()
+}
+
+const handleSizeChange = async (s) => {
+  pageSize.value = s
+  page.value = 1
+  await fetchRoles()
+}
+
 onMounted(fetchRoles)
 </script>
 
@@ -128,6 +196,18 @@ onMounted(fetchRoles)
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
+}
+
+.roles-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
 }
 </style>
 

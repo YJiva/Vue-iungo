@@ -122,9 +122,12 @@ export const useUserStore = defineStore('user', () => {
 
   const updateProfile = async (payload) => {
     try {
-      const res = await request.post('/api/user/update', payload)
+      const safePayload = { ...(payload || {}) }
+      // roleId 仅允许管理员在后台专用接口修改
+      delete safePayload.roleId
+      const res = await request.post('/api/user/update', safePayload)
       if (res.data && res.data.code === 200) {
-        userInfo.value = { ...(userInfo.value || {}), ...payload }
+        userInfo.value = { ...(userInfo.value || {}), ...safePayload }
       }
       return res
     } catch (error) {

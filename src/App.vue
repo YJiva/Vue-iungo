@@ -1,8 +1,9 @@
 <script setup>
 import { RouterView, useRouter, useRoute } from 'vue-router'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { getTheme, setTheme } from './utils/theme'
 import { useUserStore } from './stores/user'
+import { useSiteStore } from './stores/site'
 import LoginView from './views/user/login.vue'
 import RegisterView from './views/user/register.vue'
 
@@ -12,7 +13,8 @@ import RegisterView from './views/user/register.vue'
 const router = useRouter()
 const route = useRoute()
 const userStore = useUserStore()
-
+const siteStore = useSiteStore()
+const editorFullscreen = ref(false)
 const loginTitle = '登录'
 const registerTitle = '注册'
 const theme = ref(getTheme())
@@ -31,10 +33,23 @@ const onThemeChanged = (e) => {
   }
 }
 
+const onEditorFullscreenChange = (e) => {
+  const full = !!(e && e.detail && e.detail.fullscreen)
+  editorFullscreen.value = full
+  if (full) {
+    hideHeader.value = true
+  }
+}
+
 const lastScrollY = ref(window.scrollY || 0)
 const hideHeader = ref(false)
 
+
 const handleScroll = () => {
+  if (editorFullscreen.value) {
+    hideHeader.value = true
+    return
+  }
   const currentY = window.scrollY || 0
   const delta = currentY - lastScrollY.value
 
@@ -53,12 +68,15 @@ onMounted(() => {
   theme.value = getTheme()
   window.addEventListener('theme-changed', onThemeChanged)
   window.addEventListener('scroll', handleScroll, { passive: true })
+  window.addEventListener('editor-fullscreen-change', onEditorFullscreenChange)
   userStore.checkAuth() // 检查登录状态
+  siteStore.loadPublicSiteData().catch((e) => console.error('加载站点配置失败', e))
 })
 
 onUnmounted(() => {
   window.removeEventListener('theme-changed', onThemeChanged)
   window.removeEventListener('scroll', handleScroll)
+  window.removeEventListener('editor-fullscreen-change', onEditorFullscreenChange)
 })
 
 const showAuth = ref(false)
@@ -98,18 +116,23 @@ function openNotifications() {
 function handleCommand(command) {
   if (command === 'logout') {
     userStore.logout()
-  } else if (command === 'profile') {
-    router.push('/user/center')
-  } else if (command === 'settings') {
-    router.push('/settings')
+  } else if (command === 'profile' || command === 'settings') {
+    const uid = userStore.userInfo?.id
+    if (uid) {
+      router.push(`/user/profile/${uid}`)
+    }
   }
 }
 
 // 仅在前台页面显示头部导航，在 /admin 等后台页面隐藏
+
+
 const showHeader = computed(() => {
   const path = route.path || ''
-  // 以 /admin 开头的路由认为是后台管理，不显示前台导航
-  if (path.startsWith('/admin')) {
+  if (path.startsWith('/admin') || path === '/login' || path === '/register') {
+    return false
+  }
+  if (editorFullscreen.value) {
     return false
   }
   return true
@@ -118,9 +141,34 @@ const showHeader = computed(() => {
 const headerClasses = computed(() => {
   return {
     header: true,
-    'header-hidden': hideHeader.value
+    'header-hidden': hideHeader.value,
+    'header-blocked': editorFullscreen.value
   }
 })
+
+const siteTitle = computed(() => siteStore.config.title || 'Iungo')
+const siteSubtitle = computed(() => siteStore.config.subtitle || '邀请制深度创作社区')
+const siteLogo = computed(() => siteStore.config.logoUrl || '')
+
+const applyFavicon = (href) => {
+  if (!href) return
+  let link = document.querySelector("link[rel='icon']")
+  if (!link) {
+    link = document.createElement('link')
+    link.setAttribute('rel', 'icon')
+    document.head.appendChild(link)
+  }
+  link.setAttribute('href', href)
+}
+
+watch(
+  () => siteStore.config,
+  (cfg) => {
+    document.title = cfg.title || 'Iungo'
+    applyFavicon(cfg.faviconUrl)
+  },
+  { deep: true, immediate: true }
+)
 </script>
 
 <template>
@@ -128,15 +176,16 @@ const headerClasses = computed(() => {
     <header v-if="showHeader" :class="headerClasses">
       <div class="container container-inner header-wrap">
         <div class="logo">
-          <h1>Iungo</h1>
-          <p>邀请制深度创作社区</p>
+          <img v-if="siteLogo" :src="siteLogo" alt="logo" class="logo-img" />
+          <h1>{{ siteTitle }}</h1>
+          <p>{{ siteSubtitle }}</p>
         </div>
         <div class="nav">
-          <router-link to="/home" class="nav-item" active-class="active">首页</router-link>
-          <router-link to="/blog/list" class="nav-item" active-class="active">圈层博客</router-link>
-          <router-link to="/invite" class="nav-item" active-class="active">我的邀请</router-link>
-          <router-link to="/user/center" class="nav-item" active-class="active">个人中心</router-link>
-          <router-link to="/blog/edit" class="nav-item publish-btn" active-class="active">发布博客</router-link>
+          <router-link to="/home" class="nav-item" active-class="active">{{ siteStore.config.navHomeText || '首页' }}</router-link>
+          <router-link to="/blog/list" class="nav-item" active-class="active">{{ siteStore.config.navBlogText || '圈层博客' }}</router-link>
+          <router-link to="/post/category/list" class="nav-item" active-class="active">贴吧</router-link>
+          <router-link to="/invite" class="nav-item" active-class="active">{{ siteStore.config.navInviteText || '我的邀请' }}</router-link>
+          <router-link to="/blog/edit" class="nav-item publish-btn" active-class="active">{{ siteStore.config.navPublishText || '发布博客' }}</router-link>
         </div>
         <div class="search-box">
           <el-input v-model="searchQuery" placeholder="搜索内容" @keyup.enter="performSearch" />
@@ -155,8 +204,8 @@ const headerClasses = computed(() => {
               </el-button>
               <template #dropdown>
                 <el-dropdown-menu>
-                  <el-dropdown-item command="profile">个人资料</el-dropdown-item>
-                  <el-dropdown-item command="settings">设置</el-dropdown-item>
+                  <el-dropdown-item command="profile">主页  </el-dropdown-item>
+
                   <el-dropdown-item command="logout" divided>登出</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
@@ -173,7 +222,15 @@ const headerClasses = computed(() => {
 
     <el-dialog v-model="showAuth" :draggable="true" :close-on-click-modal="false" :title="authMode === 'login' ? loginTitle : registerTitle" width="520px">
       <el-container>
-        <el-main><component :is="authMode === 'login' ? LoginView : RegisterView" @success="showAuth = false" @open-register="openRegister" /></el-main>
+        <el-main>
+          <component
+            :is="authMode === 'login' ? LoginView : RegisterView"
+            @success="showAuth = false"
+            @open-register="openRegister"
+            @open-login="openLogin"
+            @close-auth="showAuth = false"
+          />
+        </el-main>
       </el-container>
     </el-dialog>
   </div>
@@ -188,7 +245,13 @@ const headerClasses = computed(() => {
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-color);
-  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
+  transition: transform 0.2s ease-out, box-shadow 0.2s ease-out, opacity 0.2s ease-out;
+}
+
+.header-blocked {
+  opacity: 0;
+  pointer-events: none;
+  z-index: 0 !important;
 }
 
 .header-hidden {
@@ -206,6 +269,14 @@ const headerClasses = computed(() => {
   margin: 0;
   font-size: 1.35rem;
   letter-spacing: 0.06em;
+}
+
+.logo-img {
+  width: 30px;
+  height: 30px;
+  object-fit: cover;
+  border-radius: 6px;
+  margin-right: 8px;
 }
 
 .logo p {

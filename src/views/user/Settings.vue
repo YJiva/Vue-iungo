@@ -1,7 +1,7 @@
 <template>
   <div class="page-settings">
     <div class="container container-inner" v-if="user">
-      <h2>账户设置</h2>
+      <h2>编辑个人资料</h2>
       <div class="settings-grid">
         <el-card class="settings-card">
           <h3>基本资料</h3>
@@ -15,12 +15,12 @@
             <el-form-item label="昵称" prop="nickname">
               <el-input v-model="profileForm.nickname" placeholder="展示名称" />
             </el-form-item>
-             <el-form-item label="性别" prop="gender">
-             <el-radio-group v-model="profileForm.gender">
-      <el-radio :label="1">男</el-radio>
-      <el-radio :label="2">女</el-radio>
-      <el-radio :label="0">未知</el-radio>
-  </el-radio-group>
+            <el-form-item label="性别" prop="gender">
+              <el-radio-group v-model="profileForm.gender">
+                <el-radio :label="1">男</el-radio>
+                <el-radio :label="2">女</el-radio>
+                <el-radio :label="0">未知</el-radio>
+              </el-radio-group>
             </el-form-item>
             <el-form-item label="头像">
               <div class="avatar-row">
@@ -56,23 +56,9 @@
         </el-card>
 
         <el-card class="settings-card">
-          <h3>修改密码</h3>
-          <el-form :model="pwdForm" :rules="pwdRules" ref="pwdRef" label-width="90px">
-            <el-form-item label="当前密码" prop="oldPassword">
-              <el-input v-model="pwdForm.oldPassword" type="password" />
-            </el-form-item>
-            <el-form-item label="新密码" prop="newPassword">
-              <el-input v-model="pwdForm.newPassword" type="password" />
-            </el-form-item>
-            <el-form-item label="确认新密码" prop="confirm">
-              <el-input v-model="pwdForm.confirm" type="password" />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" :loading="savingPwd" @click="submitPassword">
-                修改密码
-              </el-button>
-            </el-form-item>
-          </el-form>
+          <h3>安全设置</h3>
+          <p class="setting-tip">修改密码已独立到单独页面进行操作。</p>
+          <el-button type="primary" plain @click="goChangePassword">去修改密码</el-button>
         </el-card>
       </div>
     </div>
@@ -108,16 +94,13 @@ import { useUserStore } from '../../stores/user'
 import { ElMessage } from 'element-plus'
 import VuePictureCropper, { cropper } from 'vue-picture-cropper'
 
-
 const router = useRouter()
 const userStore = useUserStore()
 
 const user = computed(() => userStore.userInfo)
 
 const profileRef = ref(null)
-const pwdRef = ref(null)
 const savingProfile = ref(false)
-const savingPwd = ref(false)
 
 const profileForm = ref({
   id: '',
@@ -133,20 +116,8 @@ const defaultAvatar = 'https://via.placeholder.com/80x80.png?text=Avatar'
 const avatarDialogVisible = ref(false)
 const rawAvatar = ref('')
 
-const pwdForm = ref({
-  oldPassword: '',
-  newPassword: '',
-  confirm: ''
-})
-
 const profileRules = {
   nickname: [{ required: false }]
-}
-
-const pwdRules = {
-  oldPassword: [{ required: true, message: '请输入当前密码', trigger: 'blur' }],
-  newPassword: [{ required: true, message: '请输入新密码', trigger: 'blur' }],
-  confirm: [{ required: true, message: '请再次输入新密码', trigger: 'blur' }]
 }
 
 const initProfile = () => {
@@ -192,9 +163,7 @@ const uploadCroppedAvatar = async () => {
     })
     const data = await res.json()
     if (data.code === 200 && data.data && data.data.url) {
-      // 1. 更新本地表单中的相对路径
       profileForm.value.avatar = data.data.url
-      // 2. 立即调用后端接口，把相对路径写入数据库 user.avatar
       if (user.value) {
         const payload = {
           id: user.value.id,
@@ -203,7 +172,8 @@ const uploadCroppedAvatar = async () => {
           nickname: profileForm.value.nickname,
           avatar: profileForm.value.avatar,
           bio: profileForm.value.bio,
-          gender: profileForm.value.gender
+          gender: profileForm.value.gender,
+          coverUrl: user.value.coverUrl || ''
         }
         const resUpdate = await userStore.updateProfile(payload)
         if (!(resUpdate.data && resUpdate.data.code === 200)) {
@@ -235,7 +205,8 @@ const submitProfile = () => {
         nickname: profileForm.value.nickname,
         avatar: profileForm.value.avatar,
         bio: profileForm.value.bio,
-        gender: profileForm.value.gender
+        gender: profileForm.value.gender,
+        coverUrl: user.value.coverUrl || ''
       }
       const res = await userStore.updateProfile(payload)
       if (res.data && res.data.code === 200) {
@@ -254,37 +225,8 @@ const submitProfile = () => {
   })
 }
 
-const submitPassword = () => {
-  if (!pwdRef.value) return
-  pwdRef.value.validate(async (valid) => {
-    if (!valid) return
-    if (pwdForm.value.newPassword !== pwdForm.value.confirm) {
-      ElMessage.error('两次输入的新密码不一致')
-      return
-    }
-    savingPwd.value = true
-    try {
-      const res = await userStore.changePassword({
-        oldPassword: pwdForm.value.oldPassword,
-        newPassword: pwdForm.value.newPassword
-      })
-      if (res.data && res.data.code === 200) {
-        ElMessage.success('密码已修改，请使用新密码重新登录')
-        // 可选：修改密码后强制退出
-        userStore.logout()
-        router.push('/login')
-      } else if (res.data) {
-        ElMessage.error(res.data.msg || '修改失败')
-      } else {
-        ElMessage.error('修改失败')
-      }
-    } catch (e) {
-      console.error(e)
-      ElMessage.error('网络错误')
-    } finally {
-      savingPwd.value = false
-    }
-  })
+const goChangePassword = () => {
+  router.push('/settings/password')
 }
 
 onMounted(() => {
@@ -310,6 +252,11 @@ onMounted(() => {
 
 .settings-card {
   min-height: 220px;
+}
+
+.setting-tip {
+  color: #6b7280;
+  margin-bottom: 12px;
 }
 
 .avatar-row {

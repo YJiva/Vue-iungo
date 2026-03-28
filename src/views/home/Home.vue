@@ -5,8 +5,19 @@
 
     <main class="main">
       <div class="container container-inner main-wrap">
+        <div class="home-top" v-if="siteStore.carousels.length">
+          <el-carousel v-if="siteStore.carousels.length" height="260px" class="home-carousel">
+            <el-carousel-item v-for="item in siteStore.carousels" :key="item.id || item.sort">
+              <div class="carousel-item" @click="goLink(item.linkUrl)">
+                <img :src="item.imageUrl" :alt="item.title || 'carousel'" class="carousel-img" />
+                <div class="carousel-title" v-if="item.title">{{ item.title }}</div>
+              </div>
+            </el-carousel-item>
+          </el-carousel>
+        </div>
+
         <!-- 原有左侧博客列表不变 -->
-        <div class="main-left">
+        <div class="main">
           <div class="blog-list"
                v-infinite-scroll="loadMore"
                :infinite-scroll-disabled="loadingMore || finished || loading"
@@ -64,54 +75,15 @@
         </div>
 
         <!-- 原有右侧内容不变 -->
-        <div class="main-right">
-          <div class="card invite-card">
-            <div class="invite-header">
-              <el-icon class="invite-icon"><UserFilled /></el-icon>
-              <h3>邀请制核心</h3>
-            </div>
-            <div class="invite-content">
-              <p>仅通过邀请码注册，筛选优质创作者</p>
-              <div class="invite-stats">
-                <div class="stats-item">
-                  <span>{{ totalUsers }}</span>
-                  <p>邀请用户</p>
-                </div>
-                <div class="stats-item">
-                  <span>{{ totalBlogs }}</span>
-                  <p>深度博客</p>
-                </div>
-                <div class="stats-item">
-                  <span>{{ totalInvites }}</span>
-                  <p>发出邀请</p>
-                </div>
-              </div>
-              <el-button @click="goToInviteCode" type="primary" class="publish-btn" full-width>
-                管理我的邀请码
-              </el-button>
-            </div>
-          </div>
-          <div class="card circle-card">
-            <div class="circle-header">
-              <el-icon class="circle-icon"><Collection /></el-icon>
-              <h3>我的邀请圈层</h3>
-            </div>
-            <div class="circle-list">
-              <div class="circle-item" v-for="circle in circleList" :key="circle.id">
-                <router-link :to="`/circle/${circle.id}`">
-                  <span>{{ circle.name }}</span>
-                  <span class="circle-count">{{ circle.memberCount }}人</span>
-                </router-link>
-              </div>
-            </div>
-          </div>
-        </div>
+
       </div>
     </main>
 
     <footer class="footer">
       <div class="container container-inner footer-wrap">
-        <p>InviteBlog © 2026 邀请制深度创作社区 - 专注优质内容创作与交流</p>
+        <p>{{ siteStore.config.footerText || 'Iungo © 2026 邀请制深度创作社区' }}</p>
+        <p v-if="siteStore.config.footerExtra">{{ siteStore.config.footerExtra }}</p>
+        <p v-if="siteStore.config.icpNo">{{ siteStore.config.icpNo }}</p>
       </div>
     </footer>
   </div>
@@ -124,11 +96,13 @@ import { useRouter } from 'vue-router'
 import { UserFilled, Collection } from '@element-plus/icons-vue'
 import request from '../../utils/request'
 import { useUserStore } from '../../stores/user'
+import { useSiteStore } from '../../stores/site'
 import { buildBlogTypeMap, resolveBlogTags } from '../../utils/blogTags'
 
 const router = useRouter()
 const { proxy } = getCurrentInstance()
 const userStore = useUserStore()
+const siteStore = useSiteStore()
 
 // 原有博客数据相关响应式变量不变
 const blogList = ref([])
@@ -274,6 +248,7 @@ const fetchUserDetail = async (username) => {
 
 // 5. 页面挂载时：同时加载博客数据 + 标签类型 + 用户名列表
 onMounted(() => {
+  siteStore.loadPublicSiteData().catch((e) => console.error('加载站点配置失败', e))
   fetchBlogTypes()
   fetchHomeData()
   fetchStats()
@@ -283,6 +258,15 @@ onMounted(() => {
 // 原有跳转逻辑不变
 const goToInviteCode = () => {
   router.push('/invite')
+}
+
+const goLink = (url) => {
+  if (!url) return
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    window.open(url, '_blank')
+    return
+  }
+  router.push(url)
 }
 </script>
 
@@ -359,7 +343,36 @@ const goToInviteCode = () => {
 }
 .main-wrap {
   display: flex;
+  flex-wrap: wrap;
   gap: 20px;
+}
+.home-top {
+  width: 100%;
+}
+.home-carousel {
+  border-radius: 8px;
+  overflow: hidden;
+}
+.carousel-item {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.carousel-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.carousel-title {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  padding: 4px 8px;
+  font-size: 13px;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: 4px;
 }
 .main-left {
   width: 70%;

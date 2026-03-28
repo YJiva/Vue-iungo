@@ -23,8 +23,14 @@
           <el-menu-item index="/admin/blogs">
             <span>博客管理</span>
           </el-menu-item>
+          <el-menu-item index="/admin/post-categories">
+            <span>贴吧管理</span>
+          </el-menu-item>
           <el-menu-item index="/admin/invite">
             <span>邀请管理</span>
+          </el-menu-item>
+          <el-menu-item index="/admin/site">
+            <span>站点设置</span>
           </el-menu-item>
         </el-menu>
       </el-aside>

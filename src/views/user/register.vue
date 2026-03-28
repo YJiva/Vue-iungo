@@ -46,9 +46,14 @@
       <el-form-item prop="confirm">
         <el-input v-model="form.confirm" type="password" placeholder="确认密码"></el-input>
       </el-form-item>
-			<el-form-item>
-				<el-button type="primary" :loading="loading" size="large" @click="handleRegister" style="width:100%">注册</el-button>
-			</el-form-item>
+      <el-form-item>
+        <div class="actions">
+          <el-button type="text" @click="$emit('open-login')">返回登录</el-button>
+        </div>
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" :loading="loading" size="large" @click="handleRegister" style="width:100%">注册</el-button>
+      </el-form-item>
 		</el-form>
 	</div>
 </template>
@@ -59,7 +64,7 @@ import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '../../stores/user'
 
-const emit = defineEmits(['success'])
+const emit = defineEmits(['success', 'open-login'])
 
 const form = ref({ username: '', email: '', nickname: '', inviteCode: '', emailCode: '', password: '', confirm: '',gender:0 })
 const loading = ref(false)
@@ -155,6 +160,12 @@ async function sendRegisterCode() {
 
 <style scoped>
 .auth-layout {
-	padding: 8px 0;
+  padding: 8px 0;
+}
+
+.actions {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
 }
 </style>

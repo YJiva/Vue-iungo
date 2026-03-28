@@ -35,7 +35,7 @@
             {{ blog.title }}
 
           <p class="blog-meta">
-            <span>作者ID：{{ blog.userId || '未知' }}</span>
+            <span>作者：{{ getUserName(blog.userId) || '未知' }}</span>
             <span>{{ blog.createTime }}</span>
             <span v-if="blog.read != null">{{ blog.read }} 阅读</span>
           </p>
@@ -97,6 +97,7 @@ const visibleCount = ref(0)
 const pageSize = 3
 const userStore = useUserStore()
 const route = useRoute()
+const userMap = ref({})
 
 // blog_type 映射：id -> { id, name, show }
 const typeMap = ref({})
@@ -106,6 +107,12 @@ const getExcerpt = (html) => {
   if (!html) return ''
   const plain = html.replace(/<[^>]+>/g, '').trim()
   return plain.length > 80 ? plain.slice(0, 80) + '…' : plain
+}
+
+
+const getUserName = (uid) => {
+  const u = userMap.value[uid]
+  return u?.nickname || u?.username || String(uid)
 }
 
 const resolveTags = (blog) => resolveBlogTags(blog && blog.tags, typeMap.value)
@@ -125,6 +132,18 @@ const fetchBlogTypes = async () => {
   }
 }
 
+const ensureUserProfile = async (uid) => {
+  if (!uid || userMap.value[uid]) return
+  try {
+    const res = await request.get('/api/user/public-profile', { userId: uid })
+    if (res.data && res.data.code === 200 && res.data.data) {
+      userMap.value[uid] = res.data.data
+    }
+  } catch {
+    // ignore
+  }
+}
+
 const fetchBlogs = async () => {
   loading.value = true
   try {
@@ -134,6 +153,9 @@ const fetchBlogs = async () => {
       blogList.value = resp.data.data || []
       visibleCount.value = Math.min(pageSize, blogList.value.length)
       finished.value = visibleCount.value >= blogList.value.length
+      ;[...new Set(blogList.value.map((b) => b.userId).filter(Boolean))].forEach((uid) => {
+        ensureUserProfile(uid)
+      })
     } else {
       console.error('列表加载失败', resp.data)
     }

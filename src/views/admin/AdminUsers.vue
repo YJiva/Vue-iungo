@@ -1,8 +1,19 @@
 <template>
   <div>
     <h2 class="section-title">用户管理</h2>
+    <div class="toolbar">
+      <el-input
+        v-model="q"
+        clearable
+        placeholder="搜索：输入ID(纯数字)或关键词(用户名/昵称/邮箱)"
+        style="max-width: 420px;"
+        @keyup.enter="onSearch"
+      />
+      <el-button size="small" style="margin-left: 10px;" @click="onSearch">搜索</el-button>
+    </div>
+
     <el-table :data="users" style="width: 100%;" size="small" v-loading="loadingUsers">
-      <el-table-column prop="id" label="ID" width="60" />
+      <el-table-column prop="id" label="ID" width="80" sortable />
       <el-table-column label="头像" width="72">
         <template #default="scope">
           <el-avatar :src="scope.row.avatar || defaultAvatar" :size="32" />
@@ -16,7 +27,7 @@
           <el-tag size="small" :type="genderTagType(scope.row.gender)">{{ genderText(scope.row.gender) }}</el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="createTime" label="创建日期" width="170">
+      <el-table-column prop="createTime" label="创建日期" width="180" sortable>
         <template #default="scope">
           <span>{{ formatTime(scope.row.createTime) }}</span>
         </template>
@@ -57,6 +68,19 @@
       </el-table-column>
     </el-table>
 
+    <div class="pager">
+      <el-pagination
+        background
+        layout="prev, pager, next, sizes, total"
+        :total="total"
+        :page-size="pageSize"
+        :current-page="page"
+        :page-sizes="[5, 10, 20, 50, 100]"
+        @current-change="handlePageChange"
+        @size-change="handleSizeChange"
+      />
+    </div>
+
     <el-dialog v-model="editVisible" title="编辑用户" width="520px">
       <el-form :model="editForm" label-width="90px">
         <el-form-item label="用户名">
@@ -81,12 +105,6 @@
         <el-form-item label="简介">
           <el-input v-model="editForm.bio" type="textarea" rows="3" />
         </el-form-item>
-        <el-form-item label="角色">
-          <el-select v-model="editForm.roleId" style="width: 100%;">
-            <el-option :value="1" label="USER" />
-            <el-option :value="2" label="ADMIN" />
-          </el-select>
-        </el-form-item>
         <el-form-item label="状态">
           <el-select v-model="editForm.status" style="width: 100%;">
             <el-option :value="1" label="启用" />
@@ -103,13 +121,17 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '../../utils/request'
 
 const users = ref([])
 const loadingUsers = ref(false)
 const defaultAvatar = 'https://via.placeholder.com/80x80.png?text=Avatar'
+const q = ref('')
+const page = ref(1)
+const pageSize = ref(5)
+const total = ref(0)
 const editVisible = ref(false)
 const savingEdit = ref(false)
 const editForm = ref({
@@ -120,7 +142,6 @@ const editForm = ref({
   gender: 0,
   avatar: '',
   bio: '',
-  roleId: 1,
   status: 1
 })
 
@@ -145,9 +166,20 @@ const formatTime = (t) => {
 const fetchUsers = async () => {
   loadingUsers.value = true
   try {
-    const res = await request.get('/api/admin/user/list')
+    const query = String(q.value || '').trim()
+    const isId = /^\d+$/.test(query)
+    const params = {
+      page: page.value,
+      size: Number(pageSize.value)
+    }
+    if (query) {
+      if (isId) params.id = Number(query)
+      else params.keyword = query
+    }
+    const res = await request.get('/api/admin/user/list', params)
     if (res.data && res.data.code === 200) {
       users.value = res.data.data || []
+      total.value = Number(res.data.total || 0)
     } else {
       ElMessage.error(res.data.msg || '加载用户失败')
     }
@@ -157,6 +189,36 @@ const fetchUsers = async () => {
   } finally {
     loadingUsers.value = false
   }
+}
+
+const onSearch = async () => {
+  page.value = 1
+  await fetchUsers()
+}
+
+let debounceTimer = null
+onBeforeUnmount(() => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+})
+watch(
+  () => q.value,
+  () => {
+    if (debounceTimer) clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => {
+      onSearch()
+    }, 300)
+  }
+)
+
+const handlePageChange = async (p) => {
+  page.value = p
+  await fetchUsers()
+}
+
+const handleSizeChange = async (s) => {
+  pageSize.value = s
+  page.value = 1
+  await fetchUsers()
 }
 
 const toggleStatus = async (row) => {
@@ -202,7 +264,6 @@ const openEdit = (row) => {
     gender: row.gender ?? 0,
     avatar: row.avatar || '',
     bio: row.bio || '',
-    roleId: row.roleId ?? 1,
     status: row.status ?? 1
   }
   editVisible.value = true
@@ -239,6 +300,19 @@ onMounted(fetchUsers)
   margin-bottom: 12px;
   font-size: 16px;
   font-weight: 600;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
 }
 </style>
 

@@ -106,6 +106,28 @@ editorConfig.MENU_CONF.uploadImage = {
   }
 }
 
+editorConfig.MENU_CONF.uploadVideo = {
+  async customUpload(file, insertFn) {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      const res = await fetch('/api/file/upload-editor-video', {
+        method: 'POST',
+        body: formData
+      })
+      const data = await res.json()
+      if (data.code === 200 && data.data && data.data.url) {
+        insertFn(data.data.url)
+      } else {
+        ElMessage.error(data.msg || '视频上传失败')
+      }
+    } catch (e) {
+      console.error(e)
+      ElMessage.error('视频上传失败')
+    }
+  }
+}
+
 onMounted(async () => {
   // support editing if id passed via query or params
   const id = route.query.id || route.params.id
@@ -146,11 +168,31 @@ onMounted(async () => {
   }
 })
 
-const handleCreated = (editor) => {
-  editorRef.value = editor
+const detectFullscreen = () => {
+  const el = document.querySelector('.w-e-full-screen-container')
+  const active = !!el
+  window.dispatchEvent(new CustomEvent('editor-fullscreen-change', { detail: { fullscreen: active } }))
 }
 
+const handleCreated = (editor) => {
+  editorRef.value = editor
+  editor.on('fullscreenChange', (isFull) => {
+    window.dispatchEvent(new CustomEvent('editor-fullscreen-change', { detail: { fullscreen: !!isFull } }))
+  })
+  setTimeout(detectFullscreen, 60)
+}
+
+const onNativeFullscreen = () => {
+  detectFullscreen()
+}
+
+onMounted(() => {
+  document.addEventListener('fullscreenchange', onNativeFullscreen)
+})
+
 onBeforeUnmount(() => {
+  document.removeEventListener('fullscreenchange', onNativeFullscreen)
+  window.dispatchEvent(new CustomEvent('editor-fullscreen-change', { detail: { fullscreen: false } }))
   const editor = editorRef.value
   if (editor) {
     editor.destroy()
@@ -208,6 +250,10 @@ const saveBlog = async () => {
   padding: 20px 0;
 }
 
+:deep(.w-e-full-screen-container) {
+  z-index: 9999 !important;
+}
+
 .rich-editor {
   border: 1px solid var(--border-color, #e5e7eb);
   border-radius: 8px;
@@ -220,6 +266,16 @@ const saveBlog = async () => {
 
 .rich-editor-body {
   height: 100%;
-  min-height: 320px;
+  min-height: 50vh;
 }
+
+.rich-editor-body :deep(.w-e-text-container) {
+  min-height: 50vh !important;
+}
+
+.rich-editor-body :deep(.w-e-text-placeholder) {
+  top: 14px;
+}
+
+.page-blog-edit { padding: 20px 0; }
 </style>

@@ -9,19 +9,27 @@ const BlogDetail = () => import('../views/blog/Detail.vue')
 const BlogMy = () => import('../views/blog/BlogMy.vue')
 const UserCenter = () => import('../views/user/Center.vue')
 const Collections = () => import('../views/user/Collections.vue')
-const Login = () => import('../views/user/login.vue')
+const Login = () => import('../views/user/LoginPage.vue')
 const Register = () => import('../views/user/register.vue')
 const Invite = () => import('../views/user/Invite.vue')
 const Notifications = () => import('../views/user/Notifications.vue')
 const Settings = () => import('../views/user/Settings.vue')
+const ChangePassword = () => import('../views/user/ChangePassword.vue')
+const UserProfile = () => import('../views/user/Profile.vue')
 const AdminLayout = () => import('../views/admin/Admin.vue')
 const AdminDashboard = () => import('../views/admin/AdminDashboard.vue')
 const AdminUsers = () => import('../views/admin/AdminUsers.vue')
 const AdminRoles = () => import('../views/admin/AdminRoles.vue')
 const AdminBlogTypes = () => import('../views/admin/AdminBlogTypes.vue')
 const AdminBlogs = () => import('../views/admin/AdminBlogs.vue')
+const AdminPostCategories = () => import('../views/admin/AdminPostCategories.vue')
 const AdminInvite = () => import('../views/admin/AdminInvite.vue')
+const AdminSite = () => import('../views/admin/AdminSite.vue')
 const AdminLogin = () => import('../views/admin/AdminLogin.vue')
+const PostCategoryList = () => import('../views/post/CategoryList.vue')
+const PostCategoryDetail = () => import('../views/post/CategoryDetail.vue')
+const PostCreate = () => import('../views/post/PostCreate.vue')
+const PostDetail = () => import('../views/post/PostDetail.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -38,7 +46,9 @@ const router = createRouter({
         { path: 'roles', component: AdminRoles },
         { path: 'blog-types', component: AdminBlogTypes },
         { path: 'blogs', component: AdminBlogs },
-        { path: 'invite', component: AdminInvite }
+        { path: 'post-categories', component: AdminPostCategories },
+        { path: 'invite', component: AdminInvite },
+        { path: 'site', component: AdminSite }
       ]
     },
     {
@@ -48,6 +58,23 @@ const router = createRouter({
     {
       path: '/home',
       component: Home
+    },
+    {
+      path: '/post/category/list',
+      component: PostCategoryList
+    },
+    {
+      path: '/post/category/:id',
+      component: PostCategoryDetail
+    },
+    {
+      path: '/post/create',
+      component: PostCreate,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/post/detail',
+      component: PostDetail
     },
     {
       path: '/blog/list',
@@ -67,6 +94,19 @@ const router = createRouter({
     {
       path: '/blog/edit',
       component: BlogEdit,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/post/categories',
+      component: PostCategoryList
+    },
+    {
+      path: '/post/category/:id',
+      component: PostCategoryDetail
+    },
+    {
+      path: '/post/create',
+      component: PostCreate,
       meta: { requiresAuth: true }
     },
     {
@@ -100,6 +140,16 @@ const router = createRouter({
     {
       path: '/settings',
       component: Settings,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/settings/password',
+      component: ChangePassword,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/user/profile/:id',
+      component: UserProfile,
       meta: { requiresAuth: true }
     }
   ]

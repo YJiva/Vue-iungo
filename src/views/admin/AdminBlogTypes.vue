@@ -2,10 +2,20 @@
   <div>
     <div class="roles-header">
       <h2 class="section-title">博客分类</h2>
-      <el-button type="primary" size="small" @click="openCreateBlogType">新增分类</el-button>
+      <div class="roles-actions">
+        <el-input
+          v-model="q"
+          clearable
+          placeholder="搜索：输入ID(纯数字)或关键词(名称/描述)"
+          style="width: 320px;"
+          @keyup.enter="onSearch"
+        />
+        <el-button size="small" @click="onSearch">搜索</el-button>
+        <el-button type="primary" size="small" @click="openCreateBlogType">新增分类</el-button>
+      </div>
     </div>
     <el-table :data="blogTypes" style="width: 100%;" size="small" v-loading="loadingBlogTypes">
-      <el-table-column prop="id" label="ID" width="60" />
+      <el-table-column prop="id" label="ID" width="80" sortable />
       <el-table-column prop="name" label="名称" width="200" />
       <el-table-column prop="show" label="显示" width="100">
         <template #default="scope">
@@ -30,6 +40,19 @@
         </template>
       </el-table-column>
     </el-table>
+
+    <div class="pager">
+      <el-pagination
+        background
+        layout="prev, pager, next, sizes, total"
+        :total="total"
+        :page-size="pageSize"
+        :current-page="page"
+        :page-sizes="[5, 10, 20, 50, 100]"
+        @current-change="handlePageChange"
+        @size-change="handleSizeChange"
+      />
+    </div>
 
     <el-dialog v-model="blogTypeDialogVisible" :title="blogTypeEditing ? '编辑分类' : '新增分类'" width="400px">
       <el-form :model="blogTypeForm" label-width="70px">
@@ -61,12 +84,16 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, onBeforeUnmount } from 'vue'
 import { ElMessage } from 'element-plus'
 import request from '../../utils/request'
 
 const blogTypes = ref([])
 const loadingBlogTypes = ref(false)
+const q = ref('')
+const page = ref(1)
+const pageSize = ref(5)
+const total = ref(0)
 const blogTypeDialogVisible = ref(false)
 const blogTypeEditing = ref(false)
 const blogTypeForm = ref({ id: null, name: '', show: 1, description: '' })
@@ -74,9 +101,20 @@ const blogTypeForm = ref({ id: null, name: '', show: 1, description: '' })
 const fetchBlogTypes = async () => {
   loadingBlogTypes.value = true
   try {
-    const res = await request.get('/api/admin/blog-type/list')
+    const query = String(q.value || '').trim()
+    const isId = /^\d+$/.test(query)
+    const params = {
+      page: page.value,
+      size: Number(pageSize.value)
+    }
+    if (query) {
+      if (isId) params.id = Number(query)
+      else params.keyword = query
+    }
+    const res = await request.get('/api/admin/blog-type/list', params)
     if (res.data && res.data.code === 200) {
       blogTypes.value = res.data.data || []
+      total.value = Number(res.data.total || 0)
     } else {
       ElMessage.error(res.data.msg || '加载博客分类失败')
     }
@@ -151,6 +189,36 @@ const toggleBlogTypeShow = async (row, val) => {
   }
 }
 
+const onSearch = async () => {
+  page.value = 1
+  await fetchBlogTypes()
+}
+
+let debounceTimer = null
+onBeforeUnmount(() => {
+  if (debounceTimer) clearTimeout(debounceTimer)
+})
+watch(
+  () => q.value,
+  () => {
+    if (debounceTimer) clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => {
+      onSearch()
+    }, 300)
+  }
+)
+
+const handlePageChange = async (p) => {
+  page.value = p
+  await fetchBlogTypes()
+}
+
+const handleSizeChange = async (s) => {
+  pageSize.value = s
+  page.value = 1
+  await fetchBlogTypes()
+}
+
 onMounted(fetchBlogTypes)
 </script>
 
@@ -165,6 +233,18 @@ onMounted(fetchBlogTypes)
   align-items: center;
   justify-content: space-between;
   margin-bottom: 8px;
+}
+
+.roles-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pager {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 12px;
 }
 </style>
 
