@@ -20,7 +20,7 @@
           {{ t.name }}
         </el-tag>
       </div>
-      <div class="content" v-html="blog.content"></div>
+      <div class="content" v-html="blog.content" @click="handleContentImageClick"></div>
       <section style="margin-top:20px;">
         <h3>互动</h3>
         <div style="display:flex;gap:16px;align-items:center;">
@@ -154,6 +154,14 @@
         <div v-else-if="!commentRoots.length" style="color:var(--text-light);margin-top:12px;">暂无评论</div>
       </section>
     </div>
+    <el-dialog v-model="previewVisible" title="图片预览" width="760px">
+      <div class="viewer-toolbar">
+        <el-button size="small" @click="previewPrev" :disabled="!canPreviewPrev">上一张</el-button>
+        <span class="viewer-index">{{ previewIndex + 1 }} / {{ previewList.length }}</span>
+        <el-button size="small" @click="previewNext" :disabled="!canPreviewNext">下一张</el-button>
+      </div>
+      <img :src="previewUrl" style="width:100%;max-height:70vh;object-fit:contain;" />
+    </el-dialog>
   </div>
 </template>
 
@@ -187,6 +195,23 @@ const expandedLimitMap = ref({})
 const userMap = ref({})
 const defaultAvatar = 'https://via.placeholder.com/80x80.png?text=Avatar'
 const replyOrder = ref('desc')
+const previewVisible = ref(false)
+const previewUrl = ref('')
+const previewIndex = ref(-1)
+
+const previewList = computed(() => {
+  const html = String(blog.value?.content || '')
+  const urls = []
+  const regex = /<img[^>]*src=["']([^"']+)["'][^>]*>/ig
+  let m
+  while ((m = regex.exec(html)) !== null) {
+    if (m[1]) urls.push(m[1])
+  }
+  return urls
+})
+
+const canPreviewPrev = computed(() => previewIndex.value > 0)
+const canPreviewNext = computed(() => previewIndex.value >= 0 && previewIndex.value < previewList.value.length - 1)
 
 async function fetchDetail(id) {
   try {
@@ -559,12 +584,39 @@ const formatTime = (t) => {
   return `${y}-${mm}-${dd}`
 }
 
+const openPreview = (url) => {
+  if (!url) return
+  const idx = previewList.value.findIndex((x) => x === url)
+  previewIndex.value = idx >= 0 ? idx : 0
+  previewUrl.value = url
+  previewVisible.value = true
+}
+
+const handleContentImageClick = (event) => {
+  const target = event.target
+  if (!target || target.tagName !== 'IMG') return
+  const src = target.getAttribute('src')
+  openPreview(src)
+}
+
+const previewPrev = () => {
+  if (!canPreviewPrev.value) return
+  previewIndex.value -= 1
+  previewUrl.value = previewList.value[previewIndex.value] || ''
+}
+
+const previewNext = () => {
+  if (!canPreviewNext.value) return
+  previewIndex.value += 1
+  previewUrl.value = previewList.value[previewIndex.value] || ''
+}
+
 
 onMounted(async () => {
   const id = route.params.id
   if (!id) {
     ElMessage.warning('未指定博客ID')
-    router.push('/blog/list')
+    router.push('/blog/list?mode=circle')
     return
   }
   blogId.value = Number(id)
@@ -578,6 +630,7 @@ onMounted(async () => {
 <style scoped>
 .page-blog-detail { padding: 20px 0; }
 .content { white-space: pre-wrap; }
+.content :deep(img) { cursor: zoom-in; }
 .comment-root { padding: 10px 0; border-bottom: 1px solid #eee; }
 .comment-meta-row { display: flex; align-items: center; gap: 8px; }
 .comment-avatar { cursor: pointer; }
@@ -593,6 +646,8 @@ onMounted(async () => {
 .reply-actions { display: flex; gap: 8px; margin-top: 4px; }
 .comment-tools { margin-top: 10px; }
 .top-comment-more { margin-top: 8px; text-align: center; }
+.viewer-toolbar { display:flex; justify-content:center; align-items:center; gap:12px; margin-bottom:10px; }
+.viewer-index { color:#606266; font-size:13px; }
 .user-link { color: #303133; cursor: pointer; transition: color 0.2s ease; }
 .user-link:hover { color: #409eff; text-decoration: none; }
 .reply-to-avatar { margin: 0 4px; vertical-align: middle; cursor: pointer; }

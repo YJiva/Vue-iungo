@@ -96,7 +96,7 @@ function openRegister() {
 const searchQuery = ref('')
 function performSearch() {
   if (searchQuery.value.trim()) {
-    router.push({ name: 'BlogList', query: { search: searchQuery.value } })
+    router.push({ path: '/search', query: { keyword: searchQuery.value, type: 'post' } })
   }
 }
 
@@ -121,6 +121,8 @@ function handleCommand(command) {
     if (uid) {
       router.push(`/user/profile/${uid}`)
     }
+  } else if (command === 'message') {
+    router.push('/messages')
   }
 }
 
@@ -182,7 +184,8 @@ watch(
         </div>
         <div class="nav">
           <router-link to="/home" class="nav-item" active-class="active">{{ siteStore.config.navHomeText || '首页' }}</router-link>
-          <router-link to="/blog/list" class="nav-item" active-class="active">{{ siteStore.config.navBlogText || '圈层博客' }}</router-link>
+          <router-link to="/blog/list?mode=circle" class="nav-item" active-class="active">博客</router-link>
+
           <router-link to="/post/category/list" class="nav-item" active-class="active">贴吧</router-link>
           <router-link to="/invite" class="nav-item" active-class="active">{{ siteStore.config.navInviteText || '我的邀请' }}</router-link>
           <router-link to="/blog/edit" class="nav-item publish-btn" active-class="active">{{ siteStore.config.navPublishText || '发布博客' }}</router-link>
@@ -205,6 +208,7 @@ watch(
               <template #dropdown>
                 <el-dropdown-menu>
                   <el-dropdown-item command="profile">主页  </el-dropdown-item>
+                  <el-dropdown-item command="message">私信</el-dropdown-item>
 
                   <el-dropdown-item command="logout" divided>登出</el-dropdown-item>
                 </el-dropdown-menu>

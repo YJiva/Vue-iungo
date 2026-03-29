@@ -26,6 +26,9 @@
           <el-menu-item index="/admin/post-categories">
             <span>贴吧管理</span>
           </el-menu-item>
+          <el-menu-item index="/admin/post">
+            <span>帖子治理</span>
+          </el-menu-item>
           <el-menu-item index="/admin/invite">
             <span>邀请管理</span>
           </el-menu-item>

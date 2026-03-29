@@ -47,11 +47,9 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column prop="openScope" label="可见范围" width="90">
+      <el-table-column prop="openScope" label="可见范围" width="120">
         <template #default="scope">
-          <span v-if="scope.row.openScope === 2">公开</span>
-          <span v-else-if="scope.row.openScope === 1">自己+公开</span>
-          <span v-else>仅自己</span>
+          <span>{{ formatOpenScope(scope.row.openScope) }}</span>
         </template>
       </el-table-column>
       <el-table-column prop="read" label="阅读" width="90" sortable />
@@ -69,8 +67,9 @@
           <span v-if="!resolveTagNames(scope.row).length" style="color:#999;">无</span>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="180">
+      <el-table-column label="操作" width="250">
         <template #default="scope">
+          <el-button size="small" @click="openEditBlog(scope.row)">编辑</el-button>
           <el-button size="small" @click="viewBlog(scope.row)">查看</el-button>
           <el-button size="small" type="danger" @click="deleteBlog(scope.row)">删除</el-button>
         </template>
@@ -136,11 +135,14 @@
           />
         </el-form-item>
         <el-form-item label="可见范围">
-          <el-radio-group v-model="blogForm.openScope">
-            <el-radio :label="2">公开</el-radio>
-            <el-radio :label="1">自己+公开</el-radio>
-            <el-radio :label="0">仅自己</el-radio>
+          <el-radio-group v-model="blogForm.openScope" class="open-scope-group">
+            <el-radio :label="0">草稿 (0)</el-radio>
+            <el-radio :label="1">仅自己 (1)</el-radio>
+            <el-radio :label="2">仅粉丝 (2)</el-radio>
+            <el-radio :label="3">仅互关 (3)</el-radio>
+            <el-radio :label="4">全部可见 (4)</el-radio>
           </el-radio-group>
+          <div class="form-hint">与前台一致：0=草稿；已发布内容通常用 1～4。</div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -175,7 +177,7 @@ const blogForm = ref({
   categoryId: null,
   status: 1,
   top: 0,
-  openScope: 2
+  openScope: 4
 })
 const blogTagNames = ref([])
 
@@ -184,6 +186,26 @@ const blogTypes = ref([])
 const formatTime = (t) => {
   if (!t) return '-'
   return String(t).replace('T', ' ').slice(0, 19)
+}
+
+/** open_scope：0 草稿；1 仅自己；2 仅粉丝；3 仅互关；4 全部可见 */
+const formatOpenScope = (v) => {
+  const n = Number(v)
+  const map = {
+    0: '草稿',
+    1: '仅自己',
+    2: '仅粉丝',
+    3: '仅互关',
+    4: '全部可见'
+  }
+  if (map[n] != null) return `${map[n]} (${n})`
+  if (v === null || v === undefined || v === '') return '-'
+  return `未知 (${v})`
+}
+
+const normalizeOpenScope = (v) => {
+  const n = Number(v)
+  return [0, 1, 2, 3, 4].includes(n) ? n : 4
 }
 
 let debounceTimer = null
@@ -253,7 +275,7 @@ const openCreateBlog = () => {
     categoryId: null,
     status: 1,
     top: 0,
-    openScope: 2
+    openScope: 4
   }
   blogTagNames.value = []
   blogDialogVisible.value = true
@@ -269,7 +291,7 @@ const openEditBlog = (row) => {
     categoryId: row.categoryId,
     status: row.status,
     top: row.top,
-    openScope: row.openScope
+    openScope: normalizeOpenScope(row.openScope)
   }
   blogTagNames.value = resolveTagNames(row).map((t) => t.name)
   blogDialogVisible.value = true
@@ -404,6 +426,19 @@ onMounted(async () => {
   display: flex;
   justify-content: flex-end;
   padding-top: 12px;
+}
+
+.open-scope-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.form-hint {
+  margin-top: 6px;
+  font-size: 12px;
+  color: #909399;
 }
 </style>
 

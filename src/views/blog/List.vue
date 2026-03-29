@@ -1,6 +1,14 @@
 <template>
   <div class="page-blog-list">
     <div class="container container-inner">
+      <div class="mode-tabs">
+        <el-radio-group v-model="activeMode" size="small">
+          <el-radio-button label="circle">圈层</el-radio-button>
+          <el-radio-button label="close">密友</el-radio-button>
+        </el-radio-group>
+        <p v-if="mode === 'circle'" class="mode-desc">仅展示「粉丝可见」的博客（open_scope=2）；你需要已关注作者；仅 status=1 的帖子会显示。</p>
+        <p v-if="mode === 'close'" class="mode-desc">仅展示「仅互关可见」的博客（open_scope=3）；你与作者需互相关注，或为你本人发布；仅 status=1。</p>
+      </div>
 
 
       <!-- 初次加载骨架屏，防止布局抖动 -->
@@ -35,7 +43,7 @@
             {{ blog.title }}
 
           <p class="blog-meta">
-            <span>作者：{{ getUserName(blog.userId) || '未知' }}</span>
+            <span>作者：{{ blog.authorNickname || blog.authorUsername || getUserName(blog.userId) || '未知' }}</span>
             <span>{{ blog.createTime }}</span>
             <span v-if="blog.read != null">{{ blog.read }} 阅读</span>
           </p>
@@ -68,14 +76,18 @@
           </el-skeleton>
         </div>
 
-        <!-- 无更多内容提示 -->
-        <div v-if="finished" class="no-more-wrapper">
+        <!-- 无更多内容提示（有数据且已滑到底时） -->
+        <div v-if="finished && blogList.length" class="no-more-wrapper">
           <div class="divider"></div>
           <div class="no-more-text">没有更多了</div>
         </div>
 
-        <div v-if="!visibleBlogs.length && !loadingMore" style="text-align:center;color:var(--text-light);padding:20px;">
-          暂无博客数据
+        <div v-if="!visibleBlogs.length && !loadingMore" class="list-empty">
+          <template v-if="needsLoginForCurrentMode">
+            <p class="empty-text">请先登录后查看{{ mode === 'close' ? '密友' : '圈层' }}博客。</p>
+            <el-button type="primary" @click="$router.push('/login')">去登录</el-button>
+          </template>
+          <p v-else class="empty-text">暂无博客数据</p>
         </div>
       </div>
     </div>
@@ -83,8 +95,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, onMounted, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import request from '../../utils/request'
 import { useUserStore } from '../../stores/user'
 import { buildBlogTypeMap, resolveBlogTags } from '../../utils/blogTags'
@@ -97,7 +109,18 @@ const visibleCount = ref(0)
 const pageSize = 3
 const userStore = useUserStore()
 const route = useRoute()
+const router = useRouter()
 const userMap = ref({})
+const mode = computed(() => (route.query.mode === 'close' ? 'close' : 'circle'))
+const activeMode = computed({
+  get: () => mode.value,
+  set: (val) => {
+    router.replace({ path: '/blog/list', query: { mode: val } })
+  }
+})
+
+/** 圈层 / 密友均需登录 */
+const needsLoginForCurrentMode = computed(() => !userStore.token)
 
 // blog_type 映射：id -> { id, name, show }
 const typeMap = ref({})
@@ -146,11 +169,18 @@ const ensureUserProfile = async (uid) => {
 
 const fetchBlogs = async () => {
   loading.value = true
+  if (needsLoginForCurrentMode.value) {
+    blogList.value = []
+    visibleCount.value = 0
+    finished.value = false
+    loading.value = false
+    return
+  }
   try {
-    const userId = (userStore.userInfo && userStore.userInfo.id) || 0
-    const resp = await request.get('/api/blog/list-by-scope', { userId, scope: 2 })
+    const url = mode.value === 'close' ? '/api/blog/close-friends' : '/api/blog/circle'
+    const resp = await request.get(url)
     if (resp.data && resp.data.code === 200) {
-      blogList.value = resp.data.data || []
+      blogList.value = Array.isArray(resp.data.data) ? resp.data.data : []
       visibleCount.value = Math.min(pageSize, blogList.value.length)
       finished.value = visibleCount.value >= blogList.value.length
       ;[...new Set(blogList.value.map((b) => b.userId).filter(Boolean))].forEach((uid) => {
@@ -158,8 +188,12 @@ const fetchBlogs = async () => {
       })
     } else {
       console.error('列表加载失败', resp.data)
+      blogList.value = []
+      finished.value = true
     }
   } catch (err) {
+    blogList.value = []
+    finished.value = true
     console.error(err)
   } finally {
     loading.value = false
@@ -183,13 +217,44 @@ const loadMore = async () => {
 }
 
 onMounted(async () => {
+  if (route.query.mode === 'public') {
+    router.replace('/home')
+    return
+  }
   await fetchBlogTypes()
   await fetchBlogs()
 })
+
+watch(
+  () => route.query.mode,
+  async (m) => {
+    if (m === 'public') {
+      router.replace('/home')
+      return
+    }
+    visibleCount.value = 0
+    finished.value = false
+    await fetchBlogs()
+  }
+)
 </script>
 
 <style scoped>
 .page-blog-list { padding: 20px 0; }
+.mode-tabs { margin-bottom: 12px; }
+.mode-desc {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-light, #909399);
+}
+.list-empty {
+  text-align: center;
+  color: var(--text-light);
+  padding: 20px;
+}
+.list-empty .empty-text {
+  margin: 0 0 12px;
+}
 .blog-item {
   margin-bottom: 16px;
   padding-bottom: 12px;

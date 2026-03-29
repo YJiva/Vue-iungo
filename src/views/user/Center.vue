@@ -17,6 +17,20 @@
 
       <section class="follow-panel">
         <div class="follow-col">
+          <div class="col-title">博客可见权限</div>
+          <div class="follow-toolbar">
+            <el-select v-model="blogVisibilityScope" style="width: 260px;">
+              <el-option :value="4" label="全部可见" />
+              <el-option :value="2" label="仅粉丝可见" />
+              <el-option :value="3" label="仅互关可见" />
+              <el-option :value="1" label="仅自己可见" />
+            </el-select>
+            <el-button type="primary" @click="saveBlogVisibility">保存设置</el-button>
+          </div>
+          <div class="time">该设置影响你博客在前台与圈层中的可见范围。</div>
+        </div>
+
+        <div class="follow-col">
           <div class="col-title">我关注的人</div>
           <div class="follow-toolbar">
             <el-input
@@ -133,6 +147,7 @@ const followingPage = ref(1)
 const followersPage = ref(1)
 const pageSize = ref(8)
 const defaultAvatar = 'https://via.placeholder.com/80x80.png?text=Avatar'
+const blogVisibilityScope = ref(4)
 
 const fetchFollowing = async () => {
   loadingFollowing.value = true
@@ -237,6 +252,28 @@ const formatFollowTime = (val) => {
   return d.toLocaleDateString()
 }
 
+const fetchBlogVisibility = async () => {
+  try {
+    const res = await request.get('/api/blog/visibility/my')
+    if (res.data?.code === 200) {
+      blogVisibilityScope.value = Number(res.data.data?.visibilityScope ?? 4)
+    }
+  } catch {
+    // ignore
+  }
+}
+
+const saveBlogVisibility = async () => {
+  const res = await request.post('/api/blog/visibility/my/update', null, {
+    params: { visibilityScope: blogVisibilityScope.value }
+  })
+  if (res.data?.code === 200) {
+    ElMessage.success('博客可见权限已更新')
+  } else {
+    ElMessage.error(res.data?.msg || '更新失败')
+  }
+}
+
 onMounted(() => {
   if (!userStore.isLoggedIn) {
     router.push('/login')
@@ -255,6 +292,7 @@ onMounted(() => {
 
     fetchFollowing()
     fetchFollowers()
+    fetchBlogVisibility()
   }
 })
 </script>

@@ -13,6 +13,7 @@ const Login = () => import('../views/user/LoginPage.vue')
 const Register = () => import('../views/user/register.vue')
 const Invite = () => import('../views/user/Invite.vue')
 const Notifications = () => import('../views/user/Notifications.vue')
+const Messages = () => import('../views/user/Messages.vue')
 const Settings = () => import('../views/user/Settings.vue')
 const ChangePassword = () => import('../views/user/ChangePassword.vue')
 const UserProfile = () => import('../views/user/Profile.vue')
@@ -23,13 +24,16 @@ const AdminRoles = () => import('../views/admin/AdminRoles.vue')
 const AdminBlogTypes = () => import('../views/admin/AdminBlogTypes.vue')
 const AdminBlogs = () => import('../views/admin/AdminBlogs.vue')
 const AdminPostCategories = () => import('../views/admin/AdminPostCategories.vue')
+const AdminPostManage = () => import('../views/admin/AdminPostManage.vue')
 const AdminInvite = () => import('../views/admin/AdminInvite.vue')
 const AdminSite = () => import('../views/admin/AdminSite.vue')
 const AdminLogin = () => import('../views/admin/AdminLogin.vue')
 const PostCategoryList = () => import('../views/post/CategoryList.vue')
 const PostCategoryDetail = () => import('../views/post/CategoryDetail.vue')
+const PostCategoryManage = () => import('../views/post/CategoryManage.vue')
 const PostCreate = () => import('../views/post/PostCreate.vue')
 const PostDetail = () => import('../views/post/PostDetail.vue')
+const SearchPage = () => import('../views/search/Search.vue')
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -47,6 +51,7 @@ const router = createRouter({
         { path: 'blog-types', component: AdminBlogTypes },
         { path: 'blogs', component: AdminBlogs },
         { path: 'post-categories', component: AdminPostCategories },
+        { path: 'post', component: AdminPostManage },
         { path: 'invite', component: AdminInvite },
         { path: 'site', component: AdminSite }
       ]
@@ -60,12 +65,21 @@ const router = createRouter({
       component: Home
     },
     {
+      path: '/search',
+      component: SearchPage
+    },
+    {
       path: '/post/category/list',
       component: PostCategoryList
     },
     {
       path: '/post/category/:id',
       component: PostCategoryDetail
+    },
+    {
+      path: '/post/category/:id/manage',
+      component: PostCategoryManage,
+      meta: { requiresAuth: true }
     },
     {
       path: '/post/create',
@@ -135,6 +149,11 @@ const router = createRouter({
     {
       path: '/notifications',
       component: Notifications,
+      meta: { requiresAuth: true }
+    },
+    {
+      path: '/messages',
+      component: Messages,
       meta: { requiresAuth: true }
     },
     {

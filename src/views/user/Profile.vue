@@ -50,13 +50,21 @@
               </button>
               <button class="stat-btn" @click="activeTab = 'blogs'">
                 <strong>{{ blogTotal }}</strong>
-                <span>公开博客</span>
+                <span>{{ isSelf ? '博客' : '公开博客' }}</span>
               </button>
             </div>
           </div>
           <div class="profile-actions profile-actions-bottom">
             <el-button v-if="isSelf" type="primary" plain @click="goCenter">编辑资料</el-button>
             <el-button v-if="isSelf" type="primary" class="cover-mini-btn" @click="coverDrawerVisible = true">背景</el-button>
+            <el-button
+              v-if="!isSelf"
+              type="primary"
+              plain
+              @click="goDm(profile?.id)"
+            >
+              私信
+            </el-button>
             <el-button
               v-if="!isSelf"
               :type="isFollowing ? 'default' : 'primary'"
@@ -100,15 +108,20 @@
         </el-drawer>
         <section class="profile-content">
           <div class="tab-bar">
-            <button :class="['tab-btn', { active: activeTab === 'blogs' }]" @click="activeTab = 'blogs'">公开博客</button>
+            <button :class="['tab-btn', { active: activeTab === 'blogs' }]" @click="activeTab = 'blogs'">{{ isSelf ? '我的博客' : '公开博客' }}</button>
+            <template v-if="isSelf">
+              <button :class="['tab-btn', { active: activeTab === 'posts' }]" @click="activeTab = 'posts'">我的帖子</button>
+              <button :class="['tab-btn', { active: activeTab === 'categories' }]" @click="activeTab = 'categories'">关注的吧</button>
+              <button :class="['tab-btn', { active: activeTab === 'likedBlogs' }]" @click="activeTab = 'likedBlogs'">赞过·博客</button>
+              <button :class="['tab-btn', { active: activeTab === 'likedPosts' }]" @click="activeTab = 'likedPosts'">赞过·帖子</button>
+            </template>
             <button :class="['tab-btn', { active: activeTab === 'following' }]" @click="activeTab = 'following'">关注</button>
             <button :class="['tab-btn', { active: activeTab === 'followers' }]" @click="activeTab = 'followers'">粉丝</button>
-
           </div>
 
           <div v-if="activeTab === 'blogs'" class="tab-panel">
             <el-skeleton v-if="blogsLoading" :rows="4" animated />
-            <el-empty v-else-if="!blogs.length" description="暂无公开博客" />
+            <el-empty v-else-if="!blogs.length" :description="isSelf ? '暂无博客' : '暂无公开博客'" />
             <div v-else class="blog-list">
               <el-card v-for="item in blogs" :key="item.id" class="blog-item" shadow="hover">
                 <div class="blog-head">
@@ -116,8 +129,13 @@
                   <span class="blog-time">{{ formatDate(item.createTime) }}</span>
                 </div>
                 <div class="blog-meta">
-                  <el-tag size="small" type="info">阅读 {{ item.read || 0 }}</el-tag>
-                  <el-tag size="small">公开</el-tag>
+                  <el-tag size="small" type="info">阅读 {{ item.read ?? 0 }}</el-tag>
+                  <template v-if="isSelf">
+                    <el-tag size="small">{{ blogScopeLabel(item.openScope) }}</el-tag>
+                    <el-tag v-if="item.status === 0" size="small" type="warning">不可见</el-tag>
+                    <el-tag v-else size="small" type="success">已发布</el-tag>
+                  </template>
+                  <el-tag v-else size="small">公开</el-tag>
                 </div>
               </el-card>
 
@@ -129,6 +147,98 @@
                   :page-size="blogPageSize"
                   :total="blogTotal"
                   @current-change="handleBlogPageChange"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div v-if="isSelf && activeTab === 'posts'" class="tab-panel">
+            <el-skeleton v-if="postsLoading" :rows="4" animated />
+            <el-empty v-else-if="!posts.length" description="暂无帖子" />
+            <div v-else class="blog-list">
+              <el-card v-for="p in posts" :key="p.id" class="blog-item" shadow="hover">
+                <div class="blog-head">
+                  <h4 class="blog-title" @click="goPostDetail(p.id)">{{ p.title || '未命名帖子' }}</h4>
+                  <span class="blog-time">{{ formatDate(p.createTime) }}</span>
+                </div>
+                <div class="blog-meta">
+                  <el-tag size="small" type="info">赞 {{ p.likes ?? 0 }}</el-tag>
+                  <el-tag size="small">吧 ID {{ p.categoryId ?? '-' }}</el-tag>
+                </div>
+              </el-card>
+              <div class="blog-pagination">
+                <el-pagination
+                  background
+                  layout="prev, pager, next, total"
+                  :current-page="postPage"
+                  :page-size="postPageSize"
+                  :total="postTotal"
+                  @current-change="handlePostPageChange"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div v-if="isSelf && activeTab === 'categories'" class="tab-panel">
+            <el-skeleton v-if="categoriesLoading" :rows="4" animated />
+            <el-empty v-else-if="!followedCategories.length" description="暂未关注任何贴吧" />
+            <div v-else class="user-grid bar-grid">
+              <div
+                v-for="c in followedCategories"
+                :key="c.id"
+                class="user-card bar-card"
+                @click="goCategory(c.id)"
+              >
+                <el-avatar :src="c.icon || defaultAvatar" :size="44" shape="square" />
+                <div class="user-info">
+                  <div class="user-name">{{ c.name || '贴吧' }}</div>
+                  <div class="user-sub">{{ (c.description || '').slice(0, 40) }}{{ (c.description || '').length > 40 ? '…' : '' }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div v-if="isSelf && activeTab === 'likedBlogs'" class="tab-panel">
+            <el-skeleton v-if="likedBlogsLoading" :rows="4" animated />
+            <el-empty v-else-if="!likedBlogs.length" description="暂无赞过的博客" />
+            <div v-else class="blog-list">
+              <el-card v-for="item in likedBlogs" :key="item.id" class="blog-item" shadow="hover">
+                <div class="blog-head">
+                  <h4 class="blog-title" @click="goBlogDetail(item.id)">{{ item.title || '未命名博客' }}</h4>
+                  <span class="blog-time">{{ formatDate(item.createTime) }}</span>
+                </div>
+              </el-card>
+              <div class="blog-pagination">
+                <el-pagination
+                  background
+                  layout="prev, pager, next, total"
+                  :current-page="likedBlogPage"
+                  :page-size="likedPageSize"
+                  :total="likedBlogTotal"
+                  @current-change="handleLikedBlogPageChange"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div v-if="isSelf && activeTab === 'likedPosts'" class="tab-panel">
+            <el-skeleton v-if="likedPostsLoading" :rows="4" animated />
+            <el-empty v-else-if="!likedPosts.length" description="暂无赞过的帖子" />
+            <div v-else class="blog-list">
+              <el-card v-for="p in likedPosts" :key="p.id" class="blog-item" shadow="hover">
+                <div class="blog-head">
+                  <h4 class="blog-title" @click="goPostDetail(p.id)">{{ p.title || '未命名帖子' }}</h4>
+                  <span class="blog-time">{{ formatDate(p.createTime) }}</span>
+                </div>
+              </el-card>
+              <div class="blog-pagination">
+                <el-pagination
+                  background
+                  layout="prev, pager, next, total"
+                  :current-page="likedPostPage"
+                  :page-size="likedPageSize"
+                  :total="likedPostTotal"
+                  @current-change="handleLikedPostPageChange"
                 />
               </div>
             </div>
@@ -242,6 +352,22 @@ const blogs = ref([])
 const blogPage = ref(1)
 const blogPageSize = ref(5)
 const blogTotal = ref(0)
+const posts = ref([])
+const postsLoading = ref(false)
+const postPage = ref(1)
+const postPageSize = ref(10)
+const postTotal = ref(0)
+const followedCategories = ref([])
+const categoriesLoading = ref(false)
+const likedBlogs = ref([])
+const likedBlogsLoading = ref(false)
+const likedBlogPage = ref(1)
+const likedBlogTotal = ref(0)
+const likedPosts = ref([])
+const likedPostsLoading = ref(false)
+const likedPostPage = ref(1)
+const likedPostTotal = ref(0)
+const likedPageSize = ref(10)
 const activeTab = ref('blogs')
 const followingLoading = ref(false)
 const followersLoading = ref(false)
@@ -348,24 +474,118 @@ const loadProfile = async () => {
   }
 }
 
-const loadPublicBlogs = async () => {
+const blogScopeLabel = (openScope) => {
+  const m = { 0: '草稿', 1: '仅自己', 2: '粉丝', 3: '互关', 4: '公开' }
+  return m[openScope] ?? '—'
+}
+
+const loadBlogs = async () => {
   if (!userId.value) return
   blogsLoading.value = true
   try {
-    const res = await request.get('/api/blog/public-by-user', {
-      userId: userId.value,
-      page: blogPage.value,
-      pageSize: blogPageSize.value
-    })
-    if (res.data && res.data.code === 200 && res.data.data) {
-      blogs.value = res.data.data.list || []
-      blogTotal.value = Number(res.data.data.total || 0)
+    if (isSelf.value && userStore.token) {
+      const res = await request.get('/api/user/me/blogs', {
+        page: blogPage.value,
+        pageSize: blogPageSize.value
+      })
+      if (res.data && res.data.code === 200 && res.data.data) {
+        blogs.value = res.data.data.list || []
+        blogTotal.value = Number(res.data.data.total || 0)
+      } else {
+        blogs.value = []
+        blogTotal.value = 0
+      }
     } else {
-      blogs.value = []
-      blogTotal.value = 0
+      const res = await request.get('/api/blog/public-by-user', {
+        userId: userId.value,
+        page: blogPage.value,
+        pageSize: blogPageSize.value
+      })
+      if (res.data && res.data.code === 200 && res.data.data) {
+        blogs.value = res.data.data.list || []
+        blogTotal.value = Number(res.data.data.total || 0)
+      } else {
+        blogs.value = []
+        blogTotal.value = 0
+      }
     }
   } finally {
     blogsLoading.value = false
+  }
+}
+
+const loadMyPosts = async () => {
+  if (!isSelf.value || !userStore.token) return
+  postsLoading.value = true
+  try {
+    const res = await request.get('/api/user/me/posts', {
+      page: postPage.value,
+      pageSize: postPageSize.value
+    })
+    if (res.data && res.data.code === 200 && res.data.data) {
+      posts.value = res.data.data.list || []
+      postTotal.value = Number(res.data.data.total || 0)
+    } else {
+      posts.value = []
+      postTotal.value = 0
+    }
+  } finally {
+    postsLoading.value = false
+  }
+}
+
+const loadFollowedCategories = async () => {
+  if (!isSelf.value || !userStore.token) return
+  categoriesLoading.value = true
+  try {
+    const res = await request.get('/api/user/me/followed-categories')
+    if (res.data && res.data.code === 200) {
+      followedCategories.value = Array.isArray(res.data.data) ? res.data.data : []
+    } else {
+      followedCategories.value = []
+    }
+  } finally {
+    categoriesLoading.value = false
+  }
+}
+
+const loadLikedBlogs = async () => {
+  if (!isSelf.value || !userStore.token) return
+  likedBlogsLoading.value = true
+  try {
+    const res = await request.get('/api/user/me/liked-blogs', {
+      page: likedBlogPage.value,
+      pageSize: likedPageSize.value
+    })
+    if (res.data && res.data.code === 200 && res.data.data) {
+      likedBlogs.value = res.data.data.list || []
+      likedBlogTotal.value = Number(res.data.data.total || 0)
+    } else {
+      likedBlogs.value = []
+      likedBlogTotal.value = 0
+    }
+  } finally {
+    likedBlogsLoading.value = false
+  }
+}
+
+const loadLikedPosts = async () => {
+  if (!isSelf.value || !userStore.token) return
+  likedPostsLoading.value = true
+  try {
+    const res = await request.get('/api/user/me/liked-posts', {
+      page: likedPostPage.value,
+      pageSize: likedPageSize.value
+    })
+    if (res.data && res.data.code === 200 && res.data.data) {
+      likedPosts.value = res.data.data.list || []
+      likedPostTotal.value = Number(res.data.data.total || 0)
+    } else {
+      likedPosts.value = []
+      likedPostTotal.value = 0
+    }
+  } finally {
+    likedPostsLoading.value = false
   }
 }
 
@@ -398,7 +618,22 @@ const loadFollows = async () => {
 
 const handleBlogPageChange = (page) => {
   blogPage.value = page
-  loadPublicBlogs()
+  loadBlogs()
+}
+
+const handlePostPageChange = (page) => {
+  postPage.value = page
+  loadMyPosts()
+}
+
+const handleLikedBlogPageChange = (page) => {
+  likedBlogPage.value = page
+  loadLikedBlogs()
+}
+
+const handleLikedPostPageChange = (page) => {
+  likedPostPage.value = page
+  loadLikedPosts()
 }
 
 const goBlogDetail = (id) => {
@@ -406,9 +641,24 @@ const goBlogDetail = (id) => {
   router.push(`/blog/detail/${id}`)
 }
 
+const goPostDetail = (id) => {
+  if (!id) return
+  router.push({ path: '/post/detail', query: { id: String(id) } })
+}
+
+const goCategory = (id) => {
+  if (id == null) return
+  router.push(`/post/category/${id}`)
+}
+
 const goUser = (id) => {
   if (!id) return
   router.push(`/user/profile/${id}`)
+}
+
+const goDm = (id) => {
+  if (!id) return
+  router.push({ path: '/messages', query: { peerId: id } })
 }
 
 const filteredFollowing = computed(() => {
@@ -568,8 +818,18 @@ const goCenter = () => {
 
 const loadAll = async () => {
   blogPage.value = 1
+  postPage.value = 1
+  likedBlogPage.value = 1
+  likedPostPage.value = 1
   resetFollowPaging()
-  await Promise.all([loadProfile(), loadPublicBlogs(), loadFollows()])
+  await Promise.all([loadProfile(), loadBlogs(), loadFollows()])
+  if (isSelf.value && userStore.token) {
+    const t = activeTab.value
+    if (t === 'posts') await loadMyPosts()
+    else if (t === 'categories') await loadFollowedCategories()
+    else if (t === 'likedBlogs') await loadLikedBlogs()
+    else if (t === 'likedPosts') await loadLikedPosts()
+  }
 }
 
 onMounted(async () => {
@@ -577,6 +837,20 @@ onMounted(async () => {
 })
 watch(() => route.params.id, async () => {
   await loadAll()
+})
+
+watch(isSelf, (self) => {
+  if (!self && ['posts', 'categories', 'likedBlogs', 'likedPosts'].includes(activeTab.value)) {
+    activeTab.value = 'blogs'
+  }
+})
+
+watch(activeTab, async (tab) => {
+  if (!isSelf.value || !userStore.token) return
+  if (tab === 'posts') await loadMyPosts()
+  else if (tab === 'categories') await loadFollowedCategories()
+  else if (tab === 'likedBlogs') await loadLikedBlogs()
+  else if (tab === 'likedPosts') await loadLikedPosts()
 })
 </script>
 
@@ -768,10 +1042,19 @@ watch(() => route.params.id, async () => {
 
 .tab-bar {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   border-bottom: 1px solid #eceef1;
   padding: 12px 0;
   margin-bottom: 12px;
+}
+
+.bar-grid {
+  margin-top: 8px;
+}
+
+.bar-card {
+  align-items: flex-start;
 }
 
 .tab-btn {

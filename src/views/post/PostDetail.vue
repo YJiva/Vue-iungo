@@ -1,14 +1,23 @@
 <template>
   <div class="page-post-detail">
-    <div class="container container-inner">
+    <div class="container container-inner" @click="handleContentImageClick">
       <div v-if="post.id">
         <h2>{{ post.title }}</h2>
         <div class="floor-card floor-main">
           <div class="floor-head-row">
-            <el-avatar :src="getUserAvatar(post.authorId)" :size="28" class="avatar" />
-            <div class="floor-head">1楼（楼主） · @{{ getUserName(post.authorId) }} · {{ post.createTime }}</div>
+            <div class="floor-head">
+              1楼（楼主） ·
+              <UserHoverCard :user-id="post.authorId" :avatar-size="20" :category-id="post.categoryId" :can-mute-in-bar="canManageBar" />
+              · {{ post.createTime }}
+            </div>
           </div>
           <div class="content" v-html="post.content"></div>
+          <div class="post-actions">
+            <el-button size="small" :type="postLiked ? 'primary' : 'default'" @click="togglePostLike">
+              {{ postLiked ? '取消点赞' : '点赞' }}（{{ postLikeCount }}）
+            </el-button>
+            <el-button v-if="canDeletePost" size="small" type="danger" @click="deletePost">删除帖子</el-button>
+          </div>
         </div>
       </div>
 
@@ -22,25 +31,49 @@
 
         <div v-for="(c, idx) in filteredComments" :key="c.id" class="floor-card">
           <div class="floor-head-row">
-            <el-avatar :src="getUserAvatar(c.userId)" :size="26" class="avatar" />
-            <div class="floor-head">{{ idx + 2 }}楼 · @{{ getUserName(c.userId) }} · {{ c.createTime }}</div>
+            <div class="floor-head"  style="display: flex;">
+              {{ idx + 2 }}楼 ·
+              <UserHoverCard :user-id="c.userId" :avatar-size="18" :category-id="post.categoryId" :can-mute-in-bar="canManageBar" />
+              · {{ c.createTime }}
+            </div>
           </div>
           <div class="floor-content" v-html="c.content"></div>
-          <el-button text size="small" @click="setReplyTo(c.id)">回复</el-button>
+          <div class="op-row">
+            <el-button text size="small" @click="openRootReply(c.id)">回复</el-button>
+            <el-button text size="small" @click="toggleCommentLike(c)">点赞（{{ c.likeCount || 0 }}）</el-button>
+            <el-button v-if="canDeleteComment(c.userId)" text size="small" type="danger" @click="deleteComment(c.id)">删除</el-button>
+          </div>
+
+          <div v-if="rootInlineReplyTargetId === c.id" class="inline-reply-box">
+            <el-input
+              v-model="rootInlineReplyText"
+              type="textarea"
+              rows="2"
+              placeholder="请输入回复内容（楼中楼仅支持文字）"
+              @blur="closeRootInlineReply"
+            />
+            <div class="inline-reply-actions">
+              <el-button size="small" type="primary" @mousedown.prevent @click="submitRootInlineReply">发送</el-button>
+              <el-button size="small" @mousedown.prevent @click="closeRootInlineReply">取消</el-button>
+            </div>
+          </div>
 
           <div v-if="visibleSubs(c).length" class="sub-list">
             <div v-for="sub in visibleSubs(c)" :key="sub.id" class="sub-item">
-              <div class="sub-head-row">
-                <el-avatar :src="getUserAvatar(sub.userId)" :size="22" class="avatar" />
-                <div class="sub-head">
-                  <span class="at-user">@{{ getUserName(sub.userId) }}</span>
+              <div class="sub-head-row" >
+                <div class="sub-head" style="display: flex;">
+                  <UserHoverCard :user-id="sub.userId" :avatar-size="16" :category-id="post.categoryId" :can-mute-in-bar="canManageBar" />
                   回复
-                  <span class="at-user">@{{ getUserName(sub.replyToUserId || c.userId) }}</span>
+                  <UserHoverCard :user-id="sub.replyToUserId || c.userId" :avatar-size="16" :category-id="post.categoryId" :can-mute-in-bar="canManageBar" />
                   · {{ sub.createTime }}
                 </div>
               </div>
               <div class="sub-content" v-html="sub.content"></div>
-              <el-button text size="small" @click="openSubReply(sub.id)">回复</el-button>
+              <div class="op-row">
+                <el-button text size="small" @click="openSubReply(sub.id)">回复</el-button>
+                <el-button text size="small" @click="toggleCommentLike(sub)">点赞（{{ sub.likeCount || 0 }}）</el-button>
+                <el-button v-if="canDeleteComment(sub.userId)" text size="small" type="danger" @click="deleteComment(sub.id)">删除</el-button>
+              </div>
 
               <div v-if="inlineReplyTargetId === sub.id" class="inline-reply-box">
                 <el-input
@@ -86,7 +119,7 @@
             <el-input type="textarea" rows="3" v-model="replyForm.text" placeholder="可选，支持纯文本" />
           </el-form-item>
 
-          <el-form-item label="图片" v-if="!replyToId">
+          <el-form-item label="图片">
             <div class="img-toolbar">
               <input ref="imgInputRef" type="file" accept="image/*" multiple style="display:none" @change="onPickImages" />
               <el-button @click="imgInputRef?.click()" :disabled="replyForm.images.length >= 10">选择图片</el-button>
@@ -113,7 +146,7 @@
             </div>
           </el-form-item>
 
-          <el-form-item label="视频" v-if="!replyToId">
+          <el-form-item label="视频">
             <input ref="videoInputRef" type="file" accept="video/*" style="display:none" @change="onPickVideo" />
             <el-button @click="videoInputRef?.click()">选择视频</el-button>
             <div v-if="replyForm.videoUrl" style="margin-top:8px;width:320px;">
@@ -139,18 +172,22 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
+import { useUserStore } from '../../stores/user'
 import request from '../../utils/request'
 import { ElMessage } from 'element-plus'
-
-const userMap = ref({})
-const defaultAvatar = 'https://via.placeholder.com/80x80.png?text=Avatar'
+import UserHoverCard from '../../components/UserHoverCard.vue'
 
 const route = useRoute()
+const router = useRouter()
+const userStore = useUserStore()
 const post = ref({})
+const barAdmins = ref([])
 const comments = ref([])
 const onlyAuthor = ref(false)
 const replyToId = ref(null)
+const postLiked = ref(false)
+const postLikeCount = ref(0)
 const expanded = ref({})
 const subLimit = ref({})
 
@@ -161,6 +198,8 @@ const previewUrl = ref('')
 const dragFromIndex = ref(-1)
 const inlineReplyText = ref('')
 const inlineReplyTargetId = ref(null)
+const rootInlineReplyText = ref('')
+const rootInlineReplyTargetId = ref(null)
 
 const replyForm = ref({
   text: '',
@@ -173,6 +212,66 @@ const loadPost = async () => {
   const res = await request.get('/api/post/detail', { id })
   if (res.data?.code === 200) {
     post.value = res.data.data || {}
+  }
+}
+
+const loadBarAdmins = async () => {
+  if (!post.value?.categoryId) {
+    barAdmins.value = []
+    return
+  }
+  try {
+    const res = await request.get('/api/post/category/detail', { id: post.value.categoryId })
+    const data = res.data?.data || {}
+    barAdmins.value = data.admins || []
+  } catch {
+    barAdmins.value = []
+  }
+}
+
+const loadPostInteract = async () => {
+  const id = Number(route.query.id)
+  if (!id) return
+  const likeRes = await request.get('/api/post/like/status', { id })
+  if (likeRes.data?.code === 200) {
+    postLiked.value = !!likeRes.data.liked
+    postLikeCount.value = Number(likeRes.data.likeCount || 0)
+  }
+}
+
+const canDeletePost = computed(() => {
+  const uid = userStore.userInfo?.id
+  const roleId = userStore.userInfo?.roleId
+  return !!uid && !!post.value?.authorId && (uid === post.value.authorId || roleId === 2)
+})
+
+const canManageBar = computed(() => {
+  const uid = userStore.userInfo?.id
+  const roleId = userStore.userInfo?.roleId
+  if (!uid) return false
+  if (roleId === 2) return true
+  return (barAdmins.value || []).some((a) => Number(a.userId) === Number(uid))
+})
+
+const togglePostLike = async () => {
+  const id = Number(route.query.id)
+  const res = await request.post('/api/post/like', null, { params: { id } })
+  if (res.data?.code === 200) {
+    postLiked.value = !!res.data.liked
+    postLikeCount.value = Number(res.data.likeCount || 0)
+  } else {
+    ElMessage.error(res.data?.msg || '操作失败')
+  }
+}
+
+const deletePost = async () => {
+  const id = Number(route.query.id)
+  const res = await request.post('/api/post/delete', null, { params: { id } })
+  if (res.data?.code === 200) {
+    ElMessage.success('删除成功')
+    router.push(post.value?.categoryId ? `/post/category/${post.value.categoryId}` : '/post/category/list')
+  } else {
+    ElMessage.error(res.data?.msg || '删除失败')
   }
 }
 
@@ -272,6 +371,16 @@ const closeInlineReply = () => {
   inlineReplyText.value = ''
 }
 
+const openRootReply = (cid) => {
+  rootInlineReplyTargetId.value = cid
+  rootInlineReplyText.value = ''
+}
+
+const closeRootInlineReply = () => {
+  rootInlineReplyTargetId.value = null
+  rootInlineReplyText.value = ''
+}
+
 const clearReplyTo = () => {
   replyToId.value = null
 }
@@ -346,6 +455,14 @@ const preview = (url) => {
   previewVisible.value = true
 }
 
+const handleContentImageClick = (event) => {
+  const target = event.target
+  if (!target || target.tagName !== 'IMG') return
+  const src = target.getAttribute('src')
+  if (!src) return
+  preview(src)
+}
+
 const onDragStart = (index) => {
   dragFromIndex.value = index
 }
@@ -361,28 +478,6 @@ const onDrop = (toIndex) => {
 
 const clearVideo = () => {
   replyForm.value.videoUrl = ''
-}
-
-const ensureUserProfile = async (uid) => {
-  if (!uid || userMap.value[uid]) return
-  try {
-    const res = await request.get('/api/user/public-profile', { userId: uid })
-    if (res.data && res.data.code === 200 && res.data.data) {
-      userMap.value[uid] = res.data.data
-    }
-  } catch {
-    // ignore
-  }
-}
-
-const getUserName = (uid) => {
-  const u = userMap.value[uid]
-  return u?.nickname || u?.username || String(uid)
-}
-
-const getUserAvatar = (uid) => {
-  const u = userMap.value[uid]
-  return u?.avatar || defaultAvatar
 }
 
 const buildReplyContentHtml = () => {
@@ -403,6 +498,31 @@ const buildReplyContentHtml = () => {
     parts.push(`<div><video controls style="max-width:100%;"><source src="${replyForm.value.videoUrl}" type="video/mp4" /></video></div>`)
   }
   return parts.join('')
+}
+
+const canDeleteComment = (commentUserId) => {
+  const uid = userStore.userInfo?.id
+  const roleId = userStore.userInfo?.roleId
+  return !!uid && (uid === commentUserId || roleId === 2)
+}
+
+const toggleCommentLike = async (comment) => {
+  const res = await request.post('/api/post/comment/like/toggle', null, { params: { commentId: comment.id } })
+  if (res.data?.code === 200) {
+    comment.likeCount = Number(res.data.likeCount || 0)
+  } else {
+    ElMessage.error(res.data?.msg || '操作失败')
+  }
+}
+
+const deleteComment = async (commentId) => {
+  const res = await request.post('/api/post/comment/delete', null, { params: { commentId } })
+  if (res.data?.code === 200) {
+    ElMessage.success('删除成功')
+    await loadComments()
+  } else {
+    ElMessage.error(res.data?.msg || '删除失败')
+  }
 }
 
 const submitReply = async () => {
@@ -458,17 +578,32 @@ const submitInlineReply = async () => {
   }
 }
 
+const submitRootInlineReply = async () => {
+  const text = (rootInlineReplyText.value || '').trim()
+  if (!text) {
+    ElMessage.warning('请输入回复内容')
+    return
+  }
+  const payload = {
+    postId: Number(route.query.id),
+    parentCommentId: rootInlineReplyTargetId.value,
+    content: `<p>${text.replace(/\n/g, '<br>')}</p>`
+  }
+  const res = await request.post('/api/post/comment/add', payload)
+  if (res.data?.code === 200) {
+    ElMessage.success('回复成功')
+    closeRootInlineReply()
+    await loadComments()
+  } else {
+    ElMessage.error(res.data?.msg || '回复失败')
+  }
+}
+
 onMounted(async () => {
   await loadPost()
-  ensureUserProfile(post.value.authorId)
+  await loadBarAdmins()
+  await loadPostInteract()
   await loadComments()
-  comments.value.forEach((c) => {
-    ensureUserProfile(c.userId)
-    ;(c.children || []).forEach((s) => {
-      ensureUserProfile(s.userId)
-      ensureUserProfile(s.replyToUserId)
-    })
-  })
 })
 </script>
 
@@ -476,6 +611,11 @@ onMounted(async () => {
 .page-post-detail { padding: 20px 0; }
 .meta { color:#909399; margin-bottom: 8px; }
 .content { white-space: pre-wrap; }
+.content :deep(img),
+.floor-content :deep(img),
+.sub-content :deep(img) {
+  cursor: zoom-in;
+}
 .reply-tip { margin-bottom: 6px; color: #909399; }
 .floor-header { display:flex; align-items:center; justify-content:space-between; }
 .floor-card {
@@ -499,4 +639,8 @@ onMounted(async () => {
 .thumb { width:100%; height:92px; object-fit:cover; border-radius:6px; cursor:pointer; }
 .img-actions { display:flex; justify-content:space-between; margin-top:4px; }
 .order-badge { position:absolute; top:8px; left:8px; background:rgba(0,0,0,.55); color:#fff; font-size:11px; padding:1px 6px; border-radius:10px; }
+/deep/ .user-inline{
+  margin: 0px 5px;
+
+}
 </style>

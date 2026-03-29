@@ -48,7 +48,7 @@
                   <span>粉丝 {{ data.followersCount ?? 0 }}</span>
                 </div>
                 <div class="popover-actions">
-                  <el-button size="small" class="btn-msg" plain disabled>私信</el-button>
+                  <el-button size="small" class="btn-msg" plain @click="goDm(data.id)">私信</el-button>
                   <el-button size="small" class="btn-home" @click="goProfile(data.id)">主页</el-button>
                   <el-button
                     size="small"
@@ -216,6 +216,15 @@ const goProfile = (userId) => {
   router.push(`/user/profile/${userId}`)
 }
 
+const goDm = (userId) => {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录后再操作')
+    return
+  }
+  if (!userId) return
+  router.push({ path: '/messages', query: { peerId: userId } })
+}
+
 const toggleFollow = async (node) => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录后再操作')
@@ -241,6 +250,7 @@ const normalizedTree = computed(() => normalizeTree(props.rawTree))
 </script>
 
 <style scoped>
+
 .invite-tree-section {
   max-width: 720px;
   padding: 8px 4px;
@@ -268,28 +278,32 @@ const normalizedTree = computed(() => normalizeTree(props.rawTree))
   background-color: transparent;
 }
 
+::deep(.el-tree-node) {
+  --el-tree-node-content-height: 54px;
+}
+
 ::deep(.el-tree-node__content) {
-  height: auto;
-  padding: 4px 0;
+  height: var(--el-tree-node-content-height);
+  padding: 8px 0;
 }
 
 .node-wrap {
   position: relative;
   display: inline-block;
-  padding: 8px 2px;
-  margin: 2px 0;
+  padding: 14px 2px;
+  margin: 10px 0;
 }
 
 .node-card {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border: 1px solid var(--border-color, #ebeef5);
-  border-radius: 10px;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid #e3e5e7;
+  border-radius: 12px;
   background: #fff;
   box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
-  transition: box-shadow 0.15s ease, transform 0.15s ease;
+  transition: box-shadow 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
 }
 
 ::deep(.el-avatar) {
@@ -311,7 +325,7 @@ const normalizedTree = computed(() => normalizeTree(props.rawTree))
 }
 
 .node-username {
-  color: #6b7280;
+  color: #00aeec;
 }
 
 .clickable-avatar {
@@ -319,19 +333,20 @@ const normalizedTree = computed(() => normalizeTree(props.rawTree))
 }
 
 .node-card:hover {
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15);
+  border-color: #c9ccd0;
+  box-shadow: 0 6px 14px rgba(24, 25, 28, 0.12);
   transform: translateY(-1px);
 }
 
 .node-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   color: #111827;
 }
 
 .node-id {
   font-size: 12px;
-  color: #6b7280;
+  color: #9ca3af;
 }
 
 .popover-loading {
@@ -432,14 +447,25 @@ const normalizedTree = computed(() => normalizeTree(props.rawTree))
   position: relative;
 }
 
-::deep(.el-tree-node__children .el-tree-node__content)::before {
+.invite-tree{
+  background: none;
+}
+
+
+
+/deep/ .el-tree-node__content {
+ height: 80px !important;
+ background-color: none !important;
+}
+ (.el-tree-node__children .el-tree-node__content)::before {
   content: '';
   position: absolute;
   left: -13px;
   top: -10px;
   width: 1px;
-  height: 16px;
+  height: 50px ;
   background: #e5e7eb;
+
 }
 </style>
 
